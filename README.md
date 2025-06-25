@@ -1,28 +1,36 @@
 # 🧱 ACI-Compliant Concrete Mix Design Optimizer (White-Label Edition)
 
-This Streamlit web application calculates and visualizes concrete mix proportions based on the **ACI 211.1 method**. Built for civil and materials engineers, it supports branding customization, client deployment, and clean PDF/CSV exports — perfect for consultants, labs, and infrastructure teams.
-
----
+This Streamlit web app calculates and visualizes concrete mix proportions based on the ACI 211.1 method. Ideal for civil and materials engineers, it supports branding customization and white-label deployment.
 
 ## 🎯 Features
-- ACI 211.1-compliant mix design calculator
-- Adjustable for:
-  - Exposure conditions (Mild, Moderate, Severe)
-  - Air-entrained or non-air-entrained mixes
-  - Moisture correction and admixture dosing
-- Pie and bar chart visualizations of mix composition
-- Download results as CSV
-- **White-label ready** with custom branding support
+- ACI 211.1-compliant design
+- Air-entrained and non-air-entrained support
+- Exposure classes and moisture correction
+- Charts + CSV export
+- White-label branding via `branding.py`
 
----
+## 🚀 White-Label Setup
 
-## 🚀 White-Label Configuration
-
-This app pulls custom branding from `branding.py`:
+Edit `branding.py` to customize:
 
 ```python
 CLIENT_NAME = "Your Company"
-APP_TITLE = "Your Branded Mix Designer"
+APP_TITLE = "Your Mix Designer"
 PRIMARY_COLOR = "#123456"
 LOGO_PATH = "assets/logo.png"
 FOOTER_NOTE = "© 2025 Your Company"
+```
+
+## 🖥️ Installation
+
+```bash
+pip install -r requirements.txt
+streamlit run aci_mix_designer.py
+```
+
+## 📜 License
+
+This repository is under **CC BY-NC-ND 4.0**.  
+No commercial use, resale, or modification allowed without permission.
+
+© 2025 Automation_hub. Contact for white-label licensing.

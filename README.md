@@ -7,7 +7,7 @@ This Streamlit web app calculates and visualizes concrete mix proportions based 
 - Air-entrained and non-air-entrained support
 - Exposure classes and moisture correction
 - Charts + CSV export
-- White-label branding via `branding.py`
+- White-label branding via `main.py`
 
 ## 🚀 White-Label Setup
 

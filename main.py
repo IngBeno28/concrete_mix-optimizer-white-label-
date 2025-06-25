@@ -1,10 +1,11 @@
-# Streamlit App: ACI-Compliant Concrete Mix Design Optimizer
-
 from branding import CLIENT_NAME, APP_TITLE, PRIMARY_COLOR, LOGO_PATH, FOOTER_NOTE
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
+from fpdf import FPDF
+from PIL import Image
+import tempfile
 
 # --- Streamlit Config ---
 st.set_page_config(APP_TITLE, layout="wide")
@@ -64,7 +65,7 @@ with st.expander("🔬 Material Properties"):
     moist_fa = st.number_input("FA Moisture (%)", 0.0, 10.0, 2.0)
     moist_ca = st.number_input("CA Moisture (%)", 0.0, 10.0, 1.0)
 
-# --- Calculation Logic ---
+# --- Mix Design Logic ---
 def calculate_mix():
     ft = fck + 1.34 * std_dev
     if wcm > ACI_EXPOSURE[exposure]['max_wcm']:
@@ -91,7 +92,6 @@ def calculate_mix():
     fa_vol = 1 - (cement_vol + water_vol + air_vol + ca_vol_abs)
     fa_mass = fa_vol * sg_fa * 1000
 
-    # Moisture correction
     fa_mass_adj = fa_mass * (1 + moist_fa / 100)
     ca_mass_adj = ca_mass * (1 + moist_ca / 100)
     water -= (fa_mass * moist_fa / 100 + ca_mass * moist_ca / 100)
@@ -106,12 +106,42 @@ def calculate_mix():
         "Admixture (kg/m³)": round(cement * admixture / 100,2)
     }
 
+# --- PDF Helpers ---
+def generate_pie_chart_image(data):
+    fig, ax = plt.subplots(figsize=(4, 4))
+    ax.pie(data.values(), labels=data.keys(), autopct='%1.1f%%', startangle=90, textprops={'fontsize': 8})
+    ax.axis('equal')
+    buf = BytesIO()
+    plt.tight_layout()
+    plt.savefig(buf, format="png", dpi=150)
+    buf.seek(0)
+    return buf
+
+def create_pdf_report(dataframe, pie_chart_buf):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt=APP_TITLE, ln=True, align='C')
+    pdf.ln(10)
+
+    for index, row in dataframe.iterrows():
+        pdf.cell(200, 10, txt=f"{index}: {row['Value']}", ln=True)
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
+        tmp_file.write(pie_chart_buf.read())
+        tmp_file.flush()
+        pdf.image(tmp_file.name, x=50, y=None, w=100)
+
+    buffer = BytesIO()
+    pdf.output(buffer)
+    return buffer.getvalue()
+
+# --- Main UI Logic ---
 if st.button("🧪 Compute Mix Design"):
     result = calculate_mix()
     st.write("### 📊 Mix Proportions:")
 
     df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
-
     col_table, col_chart = st.columns([2, 1])
 
     with col_table:
@@ -119,7 +149,6 @@ if st.button("🧪 Compute Mix Design"):
 
     with col_chart:
         chart_type = st.radio("📈 Chart Type", ["Pie", "Bar"], horizontal=True)
-
         chart_data = {k.split(" (")[0]: v for k, v in result.items() if "kg/m³" in k and "Admixture" not in k}
 
         fig_width = 4 if st.session_state.get('is_mobile', False) else 5
@@ -141,6 +170,11 @@ if st.button("🧪 Compute Mix Design"):
     csv = df.to_csv().encode('utf-8')
     st.download_button(label="📥 Download CSV", data=csv, file_name="aci_mix.csv", mime='text/csv', use_container_width=True)
 
+    pie_buf = generate_pie_chart_image(chart_data)
+    pdf_bytes = create_pdf_report(df, pie_buf)
+    st.download_button("📄 Download PDF Report", pdf_bytes, file_name="mix_design_report.pdf", mime="application/pdf")
+
+# --- Footer ---
 st.markdown("---")
 st.caption(FOOTER_NOTE)
 

@@ -1,0 +1,45 @@
+/* style.css - White Label Theme for ACI Concrete Mix Designer */
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f9fafc;
+    color: #222;
+}
+
+h1, h2, h3 {
+    color: #0052cc;
+    font-weight: 600;
+}
+
+.stButton>button {
+    background-color: #0052cc;
+    color: white;
+    border-radius: 8px;
+    padding: 0.6em 1.2em;
+    font-weight: bold;
+    transition: 0.3s ease-in-out;
+}
+
+.stButton>button:hover {
+    background-color: #003f99;
+}
+
+.stDownloadButton>button {
+    background-color: #0066cc;
+    color: #fff;
+    border-radius: 6px;
+    padding: 0.5em 1em;
+    font-weight: 600;
+}
+
+.stDownloadButton>button:hover {
+    background-color: #004d99;
+}
+
+footer {
+    font-size: 0.9em;
+    color: #666;
+    text-align: center;
+    padding-top: 1em;
+    border-top: 1px solid #ddd;
+    margin-top: 2em;
+}

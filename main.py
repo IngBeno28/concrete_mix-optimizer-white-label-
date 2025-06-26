@@ -148,12 +148,7 @@ def generate_pie_chart_image(data):
         return None
 
 def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
-    """Create a professional PDF report with:
-    - Centered table with Units column
-    - Pie chart after the table
-    - Proper logo placement
-    - Project details header
-    """
+    """Create a professional PDF report with centered table and clean formatting"""
     try:
         pdf = FPDF()
         pdf.add_page()
@@ -164,9 +159,8 @@ def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
         pdf.set_author("Zhongmei Engineering Group")
         
         # --- Header Section ---
-        # Add logo (ensure LOGO_PATH is correct in your branding.py)
         if LOGO_PATH and os.path.exists(LOGO_PATH):
-            pdf.image(assets/client_logo.png, x=10, y=8, w=30)  # Adjust x,y,w as needed
+            pdf.image("assets/client_logo.png", x=10, y=8, w=30)
             
         # Report title and project info
         pdf.set_font("Arial", 'B', 16)
@@ -174,7 +168,7 @@ def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
         pdf.set_font("Arial", '', 12)
         pdf.cell(0, 10, f"Project: {project_name}", ln=True, align='C')
         pdf.cell(0, 10, f"Date: {datetime.now().strftime('%Y-%m-%d')}", ln=True, align='C')
-        pdf.ln(15)  # Add space after header
+        pdf.ln(15)
 
         # --- Mix Design Table (Centered) ---
         pdf.set_font("Arial", 'B', 12)
@@ -211,31 +205,38 @@ def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
             pdf.cell(col_widths[2], row_height, unit, border=1, align='C')
             pdf.ln(row_height)
         
-        pdf.ln(10)  # Space after table
+        pdf.ln(10)
 
         # --- Pie Chart Section ---
         if pie_chart_buf:
             try:
-                # Save chart to temp file
                 with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmpfile:
                     tmpfile.write(pie_chart_buf.getvalue())
                     tmp_path = tmpfile.name
                 
-                # Add chart title
                 pdf.set_font("Arial", 'B', 12)
                 pdf.cell(0, 10, "Mix Composition by Weight", ln=True, align='C')
+                pdf.image(tmp_path, x=50, w=110)
                 
-                # Center the chart horizontally (x=50 for letter size paper)
-                pdf.image(tmp_path, x=50, w=110)  # Adjust width as needed
+                # Simplified composition list (removed redundant key section)
                 pdf.ln(5)
-                
-                # Add chart legend
                 pdf.set_font("Arial", '', 10)
-                pdf.cell(0, 10, "Key:", ln=True, align='L')
-                pdf.cell(0, 10, "- Water: 7.6%", ln=True, align='L')
-                pdf.cell(0, 10, "- Cement: 17.4%", ln=True, align='L')
-                pdf.cell(0, 10, "- Fine Aggregate: 33.7%", ln=True, align='L')
-                pdf.cell(0, 10, "- Coarse Aggregate: 41.3%", ln=True, align='L')
+                pdf.cell(0, 10, "- Water: {:.1f}%".format(data["Water"]/sum([
+                    data["Water"], data["Cement"], 
+                    data["Fine Aggregate"], data["Coarse Aggregate"]
+                ])*100), ln=True, align='L')
+                pdf.cell(0, 10, "- Cement: {:.1f}%".format(data["Cement"]/sum([
+                    data["Water"], data["Cement"], 
+                    data["Fine Aggregate"], data["Coarse Aggregate"]
+                ])*100), ln=True, align='L')
+                pdf.cell(0, 10, "- Fine Aggregate: {:.1f}%".format(data["Fine Aggregate"]/sum([
+                    data["Water"], data["Cement"], 
+                    data["Fine Aggregate"], data["Coarse Aggregate"]
+                ])*100), ln=True, align='L')
+                pdf.cell(0, 10, "- Coarse Aggregate: {:.1f}%".format(data["Coarse Aggregate"]/sum([
+                    data["Water"], data["Cement"], 
+                    data["Fine Aggregate"], data["Coarse Aggregate"]
+                ])*100), ln=True, align='L')
                 
                 os.unlink(tmp_path)
             except Exception as e:
@@ -268,7 +269,6 @@ if st.button("🧪 Compute Mix Design"):
         col_table, col_chart = st.columns([2, 1])
 
         with col_table:
-            # Apply custom styling for right-aligned values
             st.dataframe(
                 df.style.format("{:.1f}").set_properties(**{'text-align': 'right'}),
                 height=min(len(result) * 45 + 50, 400),
@@ -276,12 +276,9 @@ if st.button("🧪 Compute Mix Design"):
             )
 
         with col_chart:
-            # Generate and display pie chart
             pie_chart_buf = generate_pie_chart_image(result)
             if pie_chart_buf:
                 st.image(pie_chart_buf, caption="Mix Composition", use_column_width=True)
-            else:
-                st.warning("Could not generate composition chart")
 
         # CSV Download
         csv = df.to_csv().encode('utf-8')

@@ -305,10 +305,7 @@ if st.button("🧪 Compute Mix Design"):
                     )
             except Exception as e:
                 st.error(f"PDF generation error: {str(e)}")
-                
-    except Exception as e:
-        st.error(f"Calculation error: {str(e)}")
-        
+            
 # --- Footer ---
 st.markdown("---")
 st.caption(FOOTER_NOTE)

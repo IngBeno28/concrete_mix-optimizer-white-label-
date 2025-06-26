@@ -16,7 +16,8 @@ with open("style.css") as f:
 
 # Optional: Display client logo
 if LOGO_PATH:
-    st.image(LOGO_PATH = "assets/Zenith logo.jpg", width=120)
+    st.image("assets/Zenith logo.jpg", width=120)
+, width=120)
 
 # --- ACI Reference Tables ---
 ACI_WATER_CONTENT = {

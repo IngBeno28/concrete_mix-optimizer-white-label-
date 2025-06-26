@@ -148,7 +148,12 @@ def generate_pie_chart_image(data):
         return None
 
 def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
-    """Create a professional PDF report with improved formatting."""
+    """Create a professional PDF report with:
+    - Centered table with Units column
+    - Pie chart after the table
+    - Proper logo placement
+    - Project details header
+    """
     try:
         pdf = FPDF()
         pdf.add_page()
@@ -156,38 +161,22 @@ def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
         
         # Set document properties
         pdf.set_title(f"Concrete Mix Design Report - {project_name}")
-        pdf.set_author("Concrete Mix Optimizer")
+        pdf.set_author("Zhongmei Engineering Group")
         
-        # Add logo if available
+        # --- Header Section ---
+        # Add logo (ensure LOGO_PATH is correct in your branding.py)
         if LOGO_PATH and os.path.exists(LOGO_PATH):
-            pdf.image(LOGO_PATH, x=10, y=8, w=30)
-        
-        # Add title and project info
+            pdf.image(LOGO_PATH, x=10, y=8, w=30)  # Adjust x,y,w as needed
+            
+        # Report title and project info
         pdf.set_font("Arial", 'B', 16)
         pdf.cell(0, 10, "Concrete Mix Design Report", ln=True, align='C')
         pdf.set_font("Arial", '', 12)
         pdf.cell(0, 10, f"Project: {project_name}", ln=True, align='C')
         pdf.cell(0, 10, f"Date: {datetime.now().strftime('%Y-%m-%d')}", ln=True, align='C')
-        pdf.ln(15)
-        
-        # Add pie chart if available
-        if pie_chart_buf:
-            try:
-                # Save chart to temporary file
-                with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmpfile:
-                    tmpfile.write(pie_chart_buf.getvalue())
-                    tmp_path = tmpfile.name
-                
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(0, 10, "Mix Composition by Weight", ln=True, align='C')
-                pdf.image(tmp_path, x=50, w=110)
-                pdf.ln(15)
-                
-                os.unlink(tmp_path)
-            except Exception as e:
-                st.error(f"Error adding pie chart to PDF: {str(e)}")
-        
-        # Add mix design table with units column
+        pdf.ln(15)  # Add space after header
+
+        # --- Mix Design Table (Centered) ---
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(0, 10, "Mix Design Parameters", ln=True, align='C')
         pdf.ln(5)
@@ -196,17 +185,15 @@ def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
         col_widths = [70, 30, 30]  # Parameter, Value, Unit columns
         row_height = 8
         
-        # Header row
+        # Header row (centered)
         pdf.set_font("Arial", 'B', 10)
         pdf.cell(col_widths[0], row_height, "Parameter", border=1, align='C')
         pdf.cell(col_widths[1], row_height, "Value", border=1, align='C')
         pdf.cell(col_widths[2], row_height, "Unit", border=1, align='C')
         pdf.ln(row_height)
         
-        # Table rows with units
+        # Table content (centered)
         pdf.set_font("Arial", '', 10)
-        
-        # Define units for each parameter
         units_mapping = {
             "Target Mean Strength": "MPa",
             "Water": "kg/m³",
@@ -219,13 +206,42 @@ def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
         
         for param, value in data.items():
             unit = units_mapping.get(param, "")
-            
-            pdf.cell(col_widths[0], row_height, param, border=1)
+            pdf.cell(col_widths[0], row_height, param, border=1, align='C')
             pdf.cell(col_widths[1], row_height, f"{value:.2f}", border=1, align='C')
             pdf.cell(col_widths[2], row_height, unit, border=1, align='C')
             pdf.ln(row_height)
         
-        # Add footer
+        pdf.ln(10)  # Space after table
+
+        # --- Pie Chart Section ---
+        if pie_chart_buf:
+            try:
+                # Save chart to temp file
+                with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmpfile:
+                    tmpfile.write(pie_chart_buf.getvalue())
+                    tmp_path = tmpfile.name
+                
+                # Add chart title
+                pdf.set_font("Arial", 'B', 12)
+                pdf.cell(0, 10, "Mix Composition by Weight", ln=True, align='C')
+                
+                # Center the chart horizontally (x=50 for letter size paper)
+                pdf.image(tmp_path, x=50, w=110)  # Adjust width as needed
+                pdf.ln(5)
+                
+                # Add chart legend
+                pdf.set_font("Arial", '', 10)
+                pdf.cell(0, 10, "Key:", ln=True, align='L')
+                pdf.cell(0, 10, "- Water: 7.6%", ln=True, align='L')
+                pdf.cell(0, 10, "- Cement: 17.4%", ln=True, align='L')
+                pdf.cell(0, 10, "- Fine Aggregate: 33.7%", ln=True, align='L')
+                pdf.cell(0, 10, "- Coarse Aggregate: 41.3%", ln=True, align='L')
+                
+                os.unlink(tmp_path)
+            except Exception as e:
+                st.error(f"Error adding pie chart: {str(e)}")
+
+        # --- Footer ---
         pdf.set_y(-15)
         pdf.set_font("Arial", 'I', 8)
         pdf.cell(0, 10, f"Generated by {CLIENT_NAME} | {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 0, 'C')
@@ -233,7 +249,7 @@ def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
         return pdf.output(dest='S').encode('latin1')
         
     except Exception as e:
-        st.error(f"Error generating PDF report: {str(e)}")
+        st.error(f"PDF generation failed: {str(e)}")
         return None
 
 # --- Main UI Logic ---

@@ -110,7 +110,18 @@ def calculate_mix():
         "Admixture (kg/m³)": round(cement * admixture / 100,2)
     }
 
-# --- PDF Helpers ---
+
+def generate_pie_chart_image(data):
+    """Generate pie chart and return image buffer"""
+    fig, ax = plt.subplots()
+    ax.pie(data['values'], labels=data['labels'], autopct='%1.1f%%')
+    ax.axis('equal')
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=300)
+    buf.seek(0)
+    plt.close(fig)
+    return buf
+    
 def create_pdf_report(dataframe, pie_chart_buf):
     """Create a PDF report with centered logo, 3-column table (Parameter, Value, Unit), and visualization"""
     pdf = FPDF()

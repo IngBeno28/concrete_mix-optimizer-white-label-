@@ -17,7 +17,7 @@ with open("style.css") as f:
 
 # Optional: Display client logo
 if LOGO_PATH:
-    st.image("assets/Zenith logo.jpg", width=120)
+    st.image("assets/Zhongmei Logo.jpg", width=100)
 
 # --- ACI Reference Tables ---
 ACI_WATER_CONTENT = {
@@ -123,7 +123,7 @@ def generate_pie_chart_image(data):
     return buf
 
 def create_pdf_report(dataframe, pie_chart_buf):
-    """Create a PDF report with centered logo and table-formatted data"""
+    """Create a PDF report with centered logo, 3-column table (Parameter, Value, Unit), and visualization"""
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
@@ -134,18 +134,18 @@ def create_pdf_report(dataframe, pie_chart_buf):
             with Image.open(LOGO_PATH) as img:
                 width, height = img.size
                 aspect = height / width
-                logo_width_mm = 40  # Adjust this to change logo size
+                logo_width_mm = 40
                 logo_height_mm = logo_width_mm * aspect
-                x_position = (210 - logo_width_mm) / 2  # Center calculation
+                x_position = (210 - logo_width_mm) / 2
                 pdf.image(LOGO_PATH, x=x_position, y=10, w=logo_width_mm, h=logo_height_mm)
-                pdf.set_y(10 + logo_height_mm + 10)  # Position content below logo
+                pdf.set_y(10 + logo_height_mm + 10)
         except Exception as e:
             st.warning(f"Could not add logo to PDF: {str(e)}")
             pdf.set_y(10)
     else:
         pdf.set_y(10)
 
-    # Header information
+    # Header information (centered)
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     pdf.cell(0, 10, txt=f"Project: {project_name}", ln=True, align='C')
     pdf.cell(0, 10, txt=f"Report Generated: {now}", ln=True, align='C')
@@ -155,31 +155,50 @@ def create_pdf_report(dataframe, pie_chart_buf):
     pdf.set_font("Arial", size=12)
     pdf.ln(15)
 
-    # Create table with mix proportions
-    col_widths = [100, 50]  # Column widths (Parameter and Value)
-    row_height = 8
-    
-    # Table Header
-    pdf.set_fill_color(200, 220, 255)  # Light blue background
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(col_widths[0], row_height, "Parameter", border=1, fill=True)
-    pdf.cell(col_widths[1], row_height, "Value", border=1, fill=True, ln=True)
-    pdf.set_font("Arial", size=12)
-    pdf.set_fill_color(255, 255, 255)  # White background
+    # Create mapping of parameters to units
+    units_mapping = {
+        "Target Mean Strength f't": "MPa",
+        "Water": "kg/m³",
+        "Cement": "kg/m³",
+        "Fine Aggregate": "kg/m³",
+        "Coarse Aggregate": "kg/m³",
+        "Air Content": "%",
+        "Admixture": "kg/m³"
+    }
 
-    # Table Rows
-    fill = False  # Alternate row shading
+    # Create centered 3-column table
+    col_widths = [80, 40, 30]  # Parameter, Value, Unit
+    table_width = sum(col_widths)
+    left_margin = (210 - table_width) / 2
+    
+    # Table Header (centered)
+    pdf.set_x(left_margin)
+    pdf.set_fill_color(200, 220, 255)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(col_widths[0], 8, "Parameter", border=1, fill=True, align='C')
+    pdf.cell(col_widths[1], 8, "Value", border=1, fill=True, align='C')
+    pdf.cell(col_widths[2], 8, "Unit", border=1, fill=True, ln=True, align='C')
+    pdf.set_font("Arial", size=12)
+    pdf.set_fill_color(255, 255, 255)
+
+    # Table Rows (centered)
+    fill = False
     for index, row in dataframe.iterrows():
-        # Alternate row colors for better readability
+        pdf.set_x(left_margin)
         fill = not fill
         pdf.set_fill_color(240, 240, 240) if fill else pdf.set_fill_color(255, 255, 255)
         
-        pdf.cell(col_widths[0], row_height, str(index), border=1, fill=True)
-        pdf.cell(col_widths[1], row_height, str(row['Value']), border=1, fill=True, ln=True)
+        # Clean parameter name by removing units in parentheses
+        clean_param = index.split(" (")[0] if " (" in index else index
+        unit = units_mapping.get(index, "")  # Get unit from mapping
+        
+        pdf.cell(col_widths[0], 8, clean_param, border=1, fill=True, align='L')  # Left-align parameter
+        pdf.cell(col_widths[1], 8, str(row['Value']), border=1, fill=True, align='C')  # Center-align value
+        pdf.cell(col_widths[2], 8, unit, border=1, fill=True, ln=True, align='C')  # Center-align unit
 
-    pdf.ln(10)  # Add space after table
+    pdf.ln(10)
 
-    # Add pie chart if available
+    # Add centered pie chart if available
     if pie_chart_buf:
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
@@ -190,7 +209,7 @@ def create_pdf_report(dataframe, pie_chart_buf):
                 pdf.ln(5)
                 pdf.set_font("Arial", 'B', 12)
                 pdf.cell(0, 10, "Mix Composition Visualization", ln=True, align='C')
-                pdf.image(tmp_file.name, x=55, y=None, w=100)  # Center chart
+                pdf.image(tmp_file.name, x=(210-100)/2, y=None, w=100)
                 
             os.unlink(tmp_file.name)
         except Exception as e:
@@ -198,7 +217,7 @@ def create_pdf_report(dataframe, pie_chart_buf):
             pdf.set_font("Arial", "I", 10)
             pdf.cell(0, 8, txt="Note: Visual chart is available in the web interface", ln=True, align='C')
 
-    # Footer with watermark and note
+    # Centered footer
     pdf.set_y(-30)
     pdf.set_font("Arial", size=10)
     pdf.cell(0, 10, txt=f"Generated by {CLIENT_NAME} | {FOOTER_NOTE}", ln=True, align='C')

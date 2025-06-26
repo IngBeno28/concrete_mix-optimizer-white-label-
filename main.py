@@ -1,14 +1,14 @@
-from branding import CLIENT_NAME, APP_TITLE, PRIMARY_COLOR, LOGO_PATH, FOOTER_NOTE
-import streamlit as st
-import pandas as pd
-import matplotlib.pyplot as plt
-from io import BytesIO
-from fpdf import FPDF
-from PIL import Image
+# --- Imports ---
+import io
 import tempfile
 import os
-import io 
 from datetime import datetime
+from fpdf import FPDF
+from PIL import Image
+import pandas as pd
+import matplotlib.pyplot as plt
+import streamlit as st
+from branding import CLIENT_NAME, APP_TITLE, PRIMARY_COLOR, LOGO_PATH, FOOTER_NOTE
 
 # --- Streamlit Config ---
 st.set_page_config(APP_TITLE, layout="wide")
@@ -162,45 +162,27 @@ def generate_pie_chart_image(data):
         st.error(f"Error generating pie chart: {str(e)}")
         return None
 
-def create_pdf_report(dataframe, pie_chart_buf, title="Concrete Mix Design Report"):
-    """
-    Create a professional PDF report with mix design results and pie chart.
-    
-    Args:
-        dataframe (pd.DataFrame): Mix design results
-        pie_chart_buf (BytesIO): Pie chart image buffer
-        title (str): Report title
-        
-    Returns:
-        bytes: PDF file as bytes
-    """
+def create_pdf_report(dataframe, pie_chart_buf=None, title=Concrete Mix Design Report):
+    """Create PDF report with mix design results."""
     try:
         pdf = FPDF()
         pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
-        
-        # Set document properties
-        pdf.set_title(title)
-        pdf.set_author("Concrete Mix Optimizer")
-        
-        # Add title
         pdf.set_font("Arial", 'B', 16)
-        pdf.cell(0, 10, title, ln=True, align='C')
+        pdf.cell(0, 10, "Concrete Mix Design Report", ln=True, align='C')
         pdf.ln(10)
         
-        # Add pie chart if available
         if pie_chart_buf:
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(0, 10, "Mix Composition", ln=True, align='C')
             pdf.image(pie_chart_buf, x=50, w=110)
             pdf.ln(5)
         
-        # Add mix design table
+        # Add table
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(0, 10, "Mix Design Parameters", ln=True, align='C')
         pdf.ln(5)
         
-        # Create table header
         pdf.set_font("Arial", 'B', 10)
         col_width = 40
         row_height = 8
@@ -208,22 +190,19 @@ def create_pdf_report(dataframe, pie_chart_buf, title="Concrete Mix Design Repor
             pdf.cell(col_width, row_height, str(col), border=1, align='C')
         pdf.ln(row_height)
         
-        # Add table rows
         pdf.set_font("Arial", '', 10)
         for _, row in dataframe.iterrows():
             for col in dataframe.columns:
                 pdf.cell(col_width, row_height, str(row[col]), border=1)
             pdf.ln(row_height)
         
-        # Add footer
         pdf.set_y(-15)
         pdf.set_font("Arial", 'I', 8)
         pdf.cell(0, 10, f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 0, 'C')
         
         return pdf.output(dest='S').encode('latin1')
-        
     except Exception as e:
-        st.error(f"Error generating PDF report: {str(e)}")
+        st.error(f"Error generating PDF: {str(e)}")
         return None
         
 # --- Main UI Logic ---

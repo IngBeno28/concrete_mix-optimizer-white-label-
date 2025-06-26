@@ -13,14 +13,7 @@ from datetime import datetime
 st.set_page_config(APP_TITLE, layout="wide")
 
 with open("style.css") as f:
-    st.markdown(
-    f"""
-    <div style='text-align: center;'>
-        <h2 style='color: {PRIMARY_COLOR};'>{APP_TITLE}</h2>
-    </div>
-    """, 
-    unsafe_allow_html=True
-)
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # Optional: Display client logo
 if LOGO_PATH:

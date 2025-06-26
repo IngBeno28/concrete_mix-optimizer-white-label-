@@ -102,46 +102,31 @@ def calculate_mix():
     water -= (fa_mass * moist_fa / 100 + ca_mass * moist_ca / 100)
 
     return {
-        "Target Mean Strength f't (MPa)": round(ft,2),
-        "Water (kg/m³)": round(water,1),
-        "Cement (kg/m³)": round(cement,1),
-        "Fine Aggregate (kg/m³)": round(fa_mass_adj,1),
-        "Coarse Aggregate (kg/m³)": round(ca_mass_adj,1),
-        "Air Content (%)": round(air_content,1),
-        "Admixture (kg/m³)": round(cement * admixture / 100,2)
+        "Target Mean Strength": round(ft,2),
+        "Water": round(water,1),
+        "Cement": round(cement,1),
+        "Fine Aggregate": round(fa_mass_adj,1),
+        "Coarse Aggregate": round(ca_mass_adj,1),
+        "Air Content": round(air_content,1),
+        "Admixture": round(cement * admixture / 100,2)
     }
 
-
 def generate_pie_chart_image(data):
-    """
-    Generate a pie chart image from composition data and return as bytes buffer.
-    
-    Args:
-        data (dict): Dictionary containing material names and quantities
-        
-    Returns:
-        BytesIO: Buffer containing PNG image of the pie chart
-    """
+    """Generate a pie chart image from composition data."""
     try:
-        # Convert the input data to proper format if needed
-        if not isinstance(data, dict):
-            raise ValueError("Input data must be a dictionary")
-            
-        # Extract labels and values
-        labels = []
-        values = []
-        for k, v in data.items():
-            if isinstance(v, (int, float)):
-                labels.append(k)
-                values.append(v)
+        # Filter only material components for the pie chart
+        material_components = {
+            k: v for k, v in data.items() 
+            if k in ["Water", "Cement", "Fine Aggregate", "Coarse Aggregate"]
+        }
         
-        if not labels or not values:
-            raise ValueError("No valid data found for chart generation")
+        if not material_components:
+            return None
             
         fig, ax = plt.subplots(figsize=(8, 8))
         wedges, texts, autotexts = ax.pie(
-            values,
-            labels=labels,
+            material_components.values(),
+            labels=material_components.keys(),
             autopct='%1.1f%%',
             startangle=90,
             textprops={'fontsize': 12}
@@ -162,7 +147,7 @@ def generate_pie_chart_image(data):
         st.error(f"Error generating pie chart: {str(e)}")
         return None
 
-def create_pdf_report(dataframe, pie_chart_buf=None, project_name="Unnamed Project"):
+def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
     """Create a professional PDF report with improved formatting."""
     try:
         pdf = FPDF()
@@ -180,9 +165,10 @@ def create_pdf_report(dataframe, pie_chart_buf=None, project_name="Unnamed Proje
         # Add title and project info
         pdf.set_font("Arial", 'B', 16)
         pdf.cell(0, 10, "Concrete Mix Design Report", ln=True, align='C')
-        pdf.set_font("Arial", 'B', 12)
+        pdf.set_font("Arial", '', 12)
         pdf.cell(0, 10, f"Project: {project_name}", ln=True, align='C')
-        pdf.ln(10)
+        pdf.cell(0, 10, f"Date: {datetime.now().strftime('%Y-%m-%d')}", ln=True, align='C')
+        pdf.ln(15)
         
         # Add pie chart if available
         if pie_chart_buf:
@@ -195,49 +181,61 @@ def create_pdf_report(dataframe, pie_chart_buf=None, project_name="Unnamed Proje
                 pdf.set_font("Arial", 'B', 12)
                 pdf.cell(0, 10, "Mix Composition by Weight", ln=True, align='C')
                 pdf.image(tmp_path, x=50, w=110)
-                pdf.ln(10)
+                pdf.ln(15)
                 
                 os.unlink(tmp_path)
             except Exception as e:
                 st.error(f"Error adding pie chart to PDF: {str(e)}")
         
-        # Add mix design table with improved formatting
+        # Add mix design table with units column
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(0, 10, "Mix Design Parameters", ln=True, align='C')
         pdf.ln(5)
         
-        # Table header
-        pdf.set_font("Arial", 'B', 10)
-        col_widths = [70, 30]  # Parameter and Value columns
+        # Table settings
+        col_widths = [70, 30, 30]  # Parameter, Value, Unit columns
         row_height = 8
         
         # Header row
+        pdf.set_font("Arial", 'B', 10)
         pdf.cell(col_widths[0], row_height, "Parameter", border=1, align='C')
         pdf.cell(col_widths[1], row_height, "Value", border=1, align='C')
+        pdf.cell(col_widths[2], row_height, "Unit", border=1, align='C')
         pdf.ln(row_height)
         
-        # Table rows with proper units
+        # Table rows with units
         pdf.set_font("Arial", '', 10)
-        for index, row in dataframe.iterrows():
-            # Format parameter names
-            param_name = index.replace(" (kg/m³)", "").replace(" (%)", "")
-            unit = "kg/m³" if "kg/m³" in index else "%" if "%" in index else ""
+        
+        # Define units for each parameter
+        units_mapping = {
+            "Target Mean Strength": "MPa",
+            "Water": "kg/m³",
+            "Cement": "kg/m³",
+            "Fine Aggregate": "kg/m³",
+            "Coarse Aggregate": "kg/m³",
+            "Air Content": "%",
+            "Admixture": "kg/m³"
+        }
+        
+        for param, value in data.items():
+            unit = units_mapping.get(param, "")
             
-            pdf.cell(col_widths[0], row_height, param_name, border=1)
-            pdf.cell(col_widths[1], row_height, f"{row['Value']} {unit}", border=1, align='C')
+            pdf.cell(col_widths[0], row_height, param, border=1)
+            pdf.cell(col_widths[1], row_height, f"{value:.2f}", border=1, align='C')
+            pdf.cell(col_widths[2], row_height, unit, border=1, align='C')
             pdf.ln(row_height)
         
         # Add footer
         pdf.set_y(-15)
         pdf.set_font("Arial", 'I', 8)
-        pdf.cell(0, 10, f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')} | {CLIENT_NAME}", 0, 0, 'C')
+        pdf.cell(0, 10, f"Generated by {CLIENT_NAME} | {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 0, 'C')
         
         return pdf.output(dest='S').encode('latin1')
         
     except Exception as e:
         st.error(f"Error generating PDF report: {str(e)}")
         return None
-        
+
 # --- Main UI Logic ---
 if st.button("🧪 Compute Mix Design"):
     try:
@@ -247,9 +245,8 @@ if st.button("🧪 Compute Mix Design"):
         
         st.write("### 📊 Mix Proportions:")
         
-        # Create DataFrame with cleaned labels
+        # Create DataFrame for display
         df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
-        df.index = df.index.str.replace(r' \(.*\)', '', regex=True)
         
         # Display results in two columns
         col_table, col_chart = st.columns([2, 1])
@@ -263,38 +260,12 @@ if st.button("🧪 Compute Mix Design"):
             )
 
         with col_chart:
-            chart_type = st.radio("📈 Chart Type", ["Pie", "Bar"], horizontal=True)
-            
-            # Prepare chart data (exclude non-material entries)
-            chart_data = {
-                k.split(" (")[0]: v for k, v in result.items() 
-                if isinstance(v, (int, float)) and 
-                any(x in k for x in ["Water", "Cement", "Fine Aggregate", "Coarse Aggregate"])
-            }
-            
-            if chart_data:
-                fig, ax = plt.subplots(figsize=(5, 5))
-                
-                if chart_type == "Pie":
-                    ax.pie(
-                        chart_data.values(),
-                        labels=chart_data.keys(),
-                        autopct='%1.1f%%',  # Simpler percentage only
-                        startangle=90,
-                        textprops={'fontsize': 9}
-                    )
-                    ax.axis('equal')
-                    ax.set_title("Mix Composition", pad=10)
-                else:
-                    bars = ax.bar(chart_data.keys(), chart_data.values(), color='skyblue')
-                    ax.bar_label(bars, fmt='%.1f', padding=3, fontsize=8)
-                    ax.set_ylabel("Mass (kg/m³)")
-                    plt.xticks(rotation=45, ha='right')
-                
-                st.pyplot(fig)
-                plt.close(fig)
+            # Generate and display pie chart
+            pie_chart_buf = generate_pie_chart_image(result)
+            if pie_chart_buf:
+                st.image(pie_chart_buf, caption="Mix Composition", use_column_width=True)
             else:
-                st.warning("No material data for chart")
+                st.warning("Could not generate composition chart")
 
         # CSV Download
         csv = df.to_csv().encode('utf-8')
@@ -305,41 +276,17 @@ if st.button("🧪 Compute Mix Design"):
             mime='text/csv'
         )
 
-        # PDF Generation (simplified)
-        if chart_data:
+        # PDF Generation
+        if pie_chart_buf:
             try:
-                # Create simple PDF without pie chart if issues persist
-                pdf = FPDF()
-                pdf.add_page()
-                pdf.set_font("Arial", 'B', 16)
-                pdf.cell(0, 10, "Concrete Mix Design Report", ln=True, align='C')
-                pdf.ln(10)
-                
-                # Add table
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(0, 10, "Mix Design Parameters", ln=True, align='C')
-                pdf.ln(5)
-                
-                pdf.set_font("Arial", 'B', 10)
-                col_width = 60
-                pdf.cell(col_width, 8, "Parameter", border=1)
-                pdf.cell(col_width-20, 8, "Value", border=1, align='R')
-                pdf.ln(8)
-                
-                pdf.set_font("Arial", '', 10)
-                for index, row in df.iterrows():
-                    pdf.cell(col_width, 8, index, border=1)
-                    pdf.cell(col_width-20, 8, f"{row['Value']:.1f}", border=1, align='R')
-                    pdf.ln(8)
-                
-                pdf_bytes = pdf.output(dest='S').encode('latin1')
-                
-                st.download_button(
-                    "📄 Download PDF Report", 
-                    pdf_bytes, 
-                    file_name="mix_design.pdf", 
-                    mime="application/pdf"
-                )
+                pdf_bytes = create_pdf_report(result, pie_chart_buf, project_name)
+                if pdf_bytes:
+                    st.download_button(
+                        "📄 Download PDF Report", 
+                        pdf_bytes, 
+                        file_name=f"mix_design_{project_name.replace(' ', '_')}.pdf", 
+                        mime="application/pdf"
+                    )
             except Exception as e:
                 st.error(f"PDF generation error: {str(e)}")
                 
@@ -349,5 +296,3 @@ if st.button("🧪 Compute Mix Design"):
 # --- Footer ---
 st.markdown("---")
 st.caption(FOOTER_NOTE)
-
-st.session_state.is_mobile = st.checkbox("Mobile view", False, disabled=True, label_visibility="collapsed")

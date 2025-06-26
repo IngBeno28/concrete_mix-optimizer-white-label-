@@ -241,120 +241,110 @@ def create_pdf_report(dataframe, pie_chart_buf=None, project_name="Unnamed Proje
 # --- Main UI Logic ---
 if st.button("🧪 Compute Mix Design"):
     try:
-        # Calculate mix and handle results
         result = calculate_mix()
         if not isinstance(result, dict):
             raise ValueError("Invalid mix calculation results")
         
         st.write("### 📊 Mix Proportions:")
         
-        # Create formatted DataFrame
+        # Create DataFrame with cleaned labels
         df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
-        df.index = df.index.str.replace(r' \(.*\)', '', regex=True)  # Clean units from index
+        df.index = df.index.str.replace(r' \(.*\)', '', regex=True)
         
         # Display results in two columns
         col_table, col_chart = st.columns([2, 1])
 
         with col_table:
-            # Format DataFrame with units where appropriate
-            formatted_df = df.copy()
-            formatted_df['Value'] = formatted_df['Value'].apply(
-                lambda x: f"{x:.1f} kg/m³" if "Aggregate" in str(x) or "Cement" in str(x) or "Water" in str(x) 
-                else f"{x:.1f}%" if "Air Content" in str(x) 
-                else f"{x:.2f}" if "Admixture" in str(x) 
-                else f"{x:.1f}"
+            # Apply custom styling for right-aligned values
+            st.dataframe(
+                df.style.format("{:.1f}").set_properties(**{'text-align': 'right'}),
+                height=min(len(result) * 45 + 50, 400),
+                use_container_width=True
             )
-            st.dataframe(formatted_df, height=min(len(result) * 45 + 50, 400), use_container_width=True)
 
         with col_chart:
-            chart_type = st.radio("📈 Chart Type", ["Pie", "Bar"], horizontal=True, key='chart_type')
+            chart_type = st.radio("📈 Chart Type", ["Pie", "Bar"], horizontal=True)
             
-            # Prepare chart data with proper labels
+            # Prepare chart data (exclude non-material entries)
             chart_data = {
-                k: v for k, v in result.items() 
-                if isinstance(v, (int, float)) and ("kg/m³" in k or "%" in k) and "Admixture" not in k
+                k.split(" (")[0]: v for k, v in result.items() 
+                if isinstance(v, (int, float)) and 
+                any(x in k for x in ["Water", "Cement", "Fine Aggregate", "Coarse Aggregate"])
             }
             
-            if not chart_data:
-                st.warning("No valid data for chart generation")
-            else:
-                fig_width = 4 if st.session_state.get('is_mobile', False) else 5
-                fig, ax = plt.subplots(figsize=(fig_width, fig_width*0.75))
-                
-                # Clean labels for chart
-                clean_labels = [label.split(" (")[0] for label in chart_data.keys()]
+            if chart_data:
+                fig, ax = plt.subplots(figsize=(5, 5))
                 
                 if chart_type == "Pie":
                     ax.pie(
-                        chart_data.values(), 
-                        labels=clean_labels, 
-                        autopct=lambda p: f'{p:.1f}%\n({p*sum(chart_data.values())/100:.1f} kg/m³)',
+                        chart_data.values(),
+                        labels=chart_data.keys(),
+                        autopct='%1.1f%%',  # Simpler percentage only
                         startangle=90,
-                        textprops={'fontsize': 8}
+                        textprops={'fontsize': 9}
                     )
                     ax.axis('equal')
-                    ax.set_title("Mix Composition", pad=20)
+                    ax.set_title("Mix Composition", pad=10)
                 else:
-                    bars = ax.bar(clean_labels, chart_data.values(), color='skyblue')
+                    bars = ax.bar(chart_data.keys(), chart_data.values(), color='skyblue')
                     ax.bar_label(bars, fmt='%.1f', padding=3, fontsize=8)
                     ax.set_ylabel("Mass (kg/m³)")
-                    ax.set_title("Mix Composition")
                     plt.xticks(rotation=45, ha='right')
                 
-                plt.tight_layout()
                 st.pyplot(fig)
                 plt.close(fig)
+            else:
+                st.warning("No material data for chart")
 
-        # CSV Download with better formatting
-        csv_df = df.copy()
-        csv_df.index.name = 'Parameter'
-        csv = csv_df.to_csv(encoding='utf-8')
+        # CSV Download
+        csv = df.to_csv().encode('utf-8')
         st.download_button(
             label="📥 Download CSV", 
             data=csv, 
-            file_name=f"concrete_mix_{datetime.now().strftime('%Y%m%d')}.csv", 
-            mime='text/csv',
-            help="Download mix design data as CSV file"
+            file_name="concrete_mix.csv", 
+            mime='text/csv'
         )
 
-        # Enhanced PDF Report Generation
+        # PDF Generation (simplified)
         if chart_data:
             try:
-                # Generate high-quality pie chart
-                pie_buf = generate_pie_chart_image({
-                    'labels': [label.split(" (")[0] for label in chart_data.keys()],
-                    'values': list(chart_data.values())
-                })
+                # Create simple PDF without pie chart if issues persist
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial", 'B', 16)
+                pdf.cell(0, 10, "Concrete Mix Design Report", ln=True, align='C')
+                pdf.ln(10)
                 
-                if pie_buf:
-                    pdf_bytes = create_pdf_report(
-                        df, 
-                        pie_buf, 
-                        project_name=project_name,
-                        exposure=exposure,
-                        fck=fck,
-                        wcm=wcm
-                    )
-                    
-                    if pdf_bytes:
-                        st.download_button(
-                            "📄 Download PDF Report", 
-                            pdf_bytes, 
-                            file_name=f"mix_design_report_{datetime.now().strftime('%Y%m%d')}.pdf", 
-                            mime="application/pdf",
-                            help="Download professional PDF report"
-                        )
-                    else:
-                        st.warning("PDF generation failed - please try again")
-                else:
-                    st.warning("Chart generation failed - cannot create PDF")
+                # Add table
+                pdf.set_font("Arial", 'B', 12)
+                pdf.cell(0, 10, "Mix Design Parameters", ln=True, align='C')
+                pdf.ln(5)
+                
+                pdf.set_font("Arial", 'B', 10)
+                col_width = 60
+                pdf.cell(col_width, 8, "Parameter", border=1)
+                pdf.cell(col_width-20, 8, "Value", border=1, align='R')
+                pdf.ln(8)
+                
+                pdf.set_font("Arial", '', 10)
+                for index, row in df.iterrows():
+                    pdf.cell(col_width, 8, index, border=1)
+                    pdf.cell(col_width-20, 8, f"{row['Value']:.1f}", border=1, align='R')
+                    pdf.ln(8)
+                
+                pdf_bytes = pdf.output(dest='S').encode('latin1')
+                
+                st.download_button(
+                    "📄 Download PDF Report", 
+                    pdf_bytes, 
+                    file_name="mix_design.pdf", 
+                    mime="application/pdf"
+                )
             except Exception as e:
-                st.error(f"Report generation error: {str(e)}")
-        else:
-            st.warning("Insufficient data for PDF report generation")
-
+                st.error(f"PDF generation error: {str(e)}")
+                
     except Exception as e:
-        st.error(f"An error occurred during mix design calculation: {str(e)}")
+        st.error(f"Calculation error: {str(e)}")
         
 # --- Footer ---
 st.markdown("---")

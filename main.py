@@ -162,64 +162,75 @@ def generate_pie_chart_image(data):
         st.error(f"Error generating pie chart: {str(e)}")
         return None
 
-def create_pdf_report(dataframe, pie_chart_buf=None, title="Concrete Mix Design Report"):
-    """Create a professional PDF report with mix design results and pie chart."""
+def create_pdf_report(dataframe, pie_chart_buf=None, project_name="Unnamed Project"):
+    """Create a professional PDF report with improved formatting."""
     try:
         pdf = FPDF()
         pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
         
         # Set document properties
-        pdf.set_title(title)
+        pdf.set_title(f"Concrete Mix Design Report - {project_name}")
         pdf.set_author("Concrete Mix Optimizer")
         
-        # Add title
+        # Add logo if available
+        if LOGO_PATH and os.path.exists(LOGO_PATH):
+            pdf.image(LOGO_PATH, x=10, y=8, w=30)
+        
+        # Add title and project info
         pdf.set_font("Arial", 'B', 16)
-        pdf.cell(0, 10, title, ln=True, align='C')
+        pdf.cell(0, 10, "Concrete Mix Design Report", ln=True, align='C')
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(0, 10, f"Project: {project_name}", ln=True, align='C')
         pdf.ln(10)
         
         # Add pie chart if available
         if pie_chart_buf:
             try:
-                # Save the BytesIO buffer to a temporary file
+                # Save chart to temporary file
                 with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmpfile:
                     tmpfile.write(pie_chart_buf.getvalue())
                     tmp_path = tmpfile.name
                 
                 pdf.set_font("Arial", 'B', 12)
-                pdf.cell(0, 10, "Mix Composition", ln=True, align='C')
+                pdf.cell(0, 10, "Mix Composition by Weight", ln=True, align='C')
                 pdf.image(tmp_path, x=50, w=110)
-                pdf.ln(5)
+                pdf.ln(10)
                 
-                # Clean up the temporary file
                 os.unlink(tmp_path)
             except Exception as e:
                 st.error(f"Error adding pie chart to PDF: {str(e)}")
         
-        # Add mix design table
+        # Add mix design table with improved formatting
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(0, 10, "Mix Design Parameters", ln=True, align='C')
         pdf.ln(5)
         
-        # Create table header
+        # Table header
         pdf.set_font("Arial", 'B', 10)
-        col_width = 40
+        col_widths = [70, 30]  # Parameter and Value columns
         row_height = 8
-        for col in dataframe.columns:
-            pdf.cell(col_width, row_height, str(col), border=1, align='C')
+        
+        # Header row
+        pdf.cell(col_widths[0], row_height, "Parameter", border=1, align='C')
+        pdf.cell(col_widths[1], row_height, "Value", border=1, align='C')
         pdf.ln(row_height)
         
-        # Add table rows
+        # Table rows with proper units
         pdf.set_font("Arial", '', 10)
-        for _, row in dataframe.iterrows():
-            for col in dataframe.columns:
-                pdf.cell(col_width, row_height, str(row[col]), border=1)
+        for index, row in dataframe.iterrows():
+            # Format parameter names
+            param_name = index.replace(" (kg/m³)", "").replace(" (%)", "")
+            unit = "kg/m³" if "kg/m³" in index else "%" if "%" in index else ""
+            
+            pdf.cell(col_widths[0], row_height, param_name, border=1)
+            pdf.cell(col_widths[1], row_height, f"{row['Value']} {unit}", border=1, align='C')
             pdf.ln(row_height)
         
         # Add footer
         pdf.set_y(-15)
         pdf.set_font("Arial", 'I', 8)
-        pdf.cell(0, 10, f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 0, 'C')
+        pdf.cell(0, 10, f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')} | {CLIENT_NAME}", 0, 0, 'C')
         
         return pdf.output(dest='S').encode('latin1')
         
@@ -229,77 +240,122 @@ def create_pdf_report(dataframe, pie_chart_buf=None, title="Concrete Mix Design 
         
 # --- Main UI Logic ---
 if st.button("🧪 Compute Mix Design"):
-    result = calculate_mix()
-    st.write("### 📊 Mix Proportions:")
-
-    # Create DataFrame safely
-    if not isinstance(result, dict):
-        st.error("Invalid mix calculation results")
-        st.stop()
-    
-    df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
-    
-    col_table, col_chart = st.columns([2, 1])
-
-    with col_table:
-        st.dataframe(df.style.format(precision=2), height=min(len(result) * 45 + 50, 400), use_container_width=True)
-
-    with col_chart:
-        chart_type = st.radio("📈 Chart Type", ["Pie", "Bar"], horizontal=True)
+    try:
+        # Calculate mix and handle results
+        result = calculate_mix()
+        if not isinstance(result, dict):
+            raise ValueError("Invalid mix calculation results")
         
-        # Filter and prepare chart data
-        chart_data = {
-            k.split(" (")[0]: v for k, v in result.items() 
-            if isinstance(v, (int, float)) and "kg/m³" in k and "Admixture" not in k
-        }
+        st.write("### 📊 Mix Proportions:")
         
-        if not chart_data:
-            st.warning("No valid data for chart generation")
-        else:
-            fig_width = 4 if st.session_state.get('is_mobile', False) else 5
-            fig, ax = plt.subplots(figsize=(fig_width, fig_width*0.75))
+        # Create formatted DataFrame
+        df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
+        df.index = df.index.str.replace(r' \(.*\)', '', regex=True)  # Clean units from index
+        
+        # Display results in two columns
+        col_table, col_chart = st.columns([2, 1])
+
+        with col_table:
+            # Format DataFrame with units where appropriate
+            formatted_df = df.copy()
+            formatted_df['Value'] = formatted_df['Value'].apply(
+                lambda x: f"{x:.1f} kg/m³" if "Aggregate" in str(x) or "Cement" in str(x) or "Water" in str(x) 
+                else f"{x:.1f}%" if "Air Content" in str(x) 
+                else f"{x:.2f}" if "Admixture" in str(x) 
+                else f"{x:.1f}"
+            )
+            st.dataframe(formatted_df, height=min(len(result) * 45 + 50, 400), use_container_width=True)
+
+        with col_chart:
+            chart_type = st.radio("📈 Chart Type", ["Pie", "Bar"], horizontal=True, key='chart_type')
             
-            if chart_type == "Pie":
-                ax.pie(chart_data.values(), labels=chart_data.keys(), autopct='%1.1f%%', startangle=90)
-                ax.axis('equal')
-            else:
-                bars = ax.bar(chart_data.keys(), chart_data.values(), color='skyblue')
-                ax.bar_label(bars, fmt='%.1f', padding=3, fontsize=8)
-                ax.set_ylabel("Mass (kg/m³)")
-                plt.xticks(rotation=45, ha='right')
+            # Prepare chart data with proper labels
+            chart_data = {
+                k: v for k, v in result.items() 
+                if isinstance(v, (int, float)) and ("kg/m³" in k or "%" in k) and "Admixture" not in k
+            }
             
-            plt.tight_layout()
-            st.pyplot(fig)
-            plt.close(fig)
-
-    # CSV Download
-    csv = df.to_csv().encode('utf-8')
-    st.download_button(
-        label="📥 Download CSV", 
-        data=csv, 
-        file_name="aci_mix.csv", 
-        mime='text/csv'
-    )
-
-    # PDF Download (only if we have valid data)
-    if chart_data:
-        pie_buf = generate_pie_chart_image(chart_data)
-        if pie_buf:
-            pdf_bytes = create_pdf_report(df, pie_buf)
-            if pdf_bytes:
-                st.download_button(
-                    "📄 Download PDF Report", 
-                    pdf_bytes, 
-                    file_name="mix_design_report.pdf", 
-                    mime="application/pdf"
-                )
+            if not chart_data:
+                st.warning("No valid data for chart generation")
             else:
-                st.warning("Failed to generate PDF report")
-        else:
-            st.warning("Failed to generate chart for PDF report")
-    else:
-        st.warning("No valid data available for PDF report generation")
+                fig_width = 4 if st.session_state.get('is_mobile', False) else 5
+                fig, ax = plt.subplots(figsize=(fig_width, fig_width*0.75))
+                
+                # Clean labels for chart
+                clean_labels = [label.split(" (")[0] for label in chart_data.keys()]
+                
+                if chart_type == "Pie":
+                    ax.pie(
+                        chart_data.values(), 
+                        labels=clean_labels, 
+                        autopct=lambda p: f'{p:.1f}%\n({p*sum(chart_data.values())/100:.1f} kg/m³)',
+                        startangle=90,
+                        textprops={'fontsize': 8}
+                    )
+                    ax.axis('equal')
+                    ax.set_title("Mix Composition", pad=20)
+                else:
+                    bars = ax.bar(clean_labels, chart_data.values(), color='skyblue')
+                    ax.bar_label(bars, fmt='%.1f', padding=3, fontsize=8)
+                    ax.set_ylabel("Mass (kg/m³)")
+                    ax.set_title("Mix Composition")
+                    plt.xticks(rotation=45, ha='right')
+                
+                plt.tight_layout()
+                st.pyplot(fig)
+                plt.close(fig)
 
+        # CSV Download with better formatting
+        csv_df = df.copy()
+        csv_df.index.name = 'Parameter'
+        csv = csv_df.to_csv(encoding='utf-8')
+        st.download_button(
+            label="📥 Download CSV", 
+            data=csv, 
+            file_name=f"concrete_mix_{datetime.now().strftime('%Y%m%d')}.csv", 
+            mime='text/csv',
+            help="Download mix design data as CSV file"
+        )
+
+        # Enhanced PDF Report Generation
+        if chart_data:
+            try:
+                # Generate high-quality pie chart
+                pie_buf = generate_pie_chart_image({
+                    'labels': [label.split(" (")[0] for label in chart_data.keys()],
+                    'values': list(chart_data.values())
+                })
+                
+                if pie_buf:
+                    pdf_bytes = create_pdf_report(
+                        df, 
+                        pie_buf, 
+                        project_name=project_name,
+                        exposure=exposure,
+                        fck=fck,
+                        wcm=wcm
+                    )
+                    
+                    if pdf_bytes:
+                        st.download_button(
+                            "📄 Download PDF Report", 
+                            pdf_bytes, 
+                            file_name=f"mix_design_report_{datetime.now().strftime('%Y%m%d')}.pdf", 
+                            mime="application/pdf",
+                            help="Download professional PDF report"
+                        )
+                    else:
+                        st.warning("PDF generation failed - please try again")
+                else:
+                    st.warning("Chart generation failed - cannot create PDF")
+            except Exception as e:
+                st.error(f"Report generation error: {str(e)}")
+        else:
+            st.warning("Insufficient data for PDF report generation")
+
+    except Exception as e:
+        st.error(f"An error occurred during mix design calculation: {str(e)}")
+        
 # --- Footer ---
 st.markdown("---")
 st.caption(FOOTER_NOTE)

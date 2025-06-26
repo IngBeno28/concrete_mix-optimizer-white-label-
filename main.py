@@ -111,17 +111,6 @@ def calculate_mix():
     }
 
 # --- PDF Helpers ---
-def generate_pie_chart_image(data):
-    fig, ax = plt.subplots(figsize=(4, 4))
-    ax.pie(data.values(), labels=data.keys(), autopct='%1.1f%%', startangle=90, textprops={'fontsize': 8})
-    ax.axis('equal')
-    buf = BytesIO()
-    plt.tight_layout()
-    plt.savefig(buf, format="png", dpi=150)
-    buf.seek(0)
-    plt.close(fig)  # Close the figure to free memory
-    return buf
-
 def create_pdf_report(dataframe, pie_chart_buf):
     """Create a PDF report with centered logo, 3-column table (Parameter, Value, Unit), and visualization"""
     pdf = FPDF()
@@ -157,13 +146,13 @@ def create_pdf_report(dataframe, pie_chart_buf):
 
     # Create mapping of parameters to units
     units_mapping = {
-        "Target Mean Strength f't": "MPa",
-        "Water": "kg/m³",
-        "Cement": "kg/m³",
-        "Fine Aggregate": "kg/m³",
-        "Coarse Aggregate": "kg/m³",
-        "Air Content": "%",
-        "Admixture": "kg/m³"
+        "Target Mean Strength f't (MPa)": "MPa",
+        "Water (kg/m³)": "kg/m³",
+        "Cement (kg/m³)": "kg/m³",
+        "Fine Aggregate (kg/m³)": "kg/m³",
+        "Coarse Aggregate (kg/m³)": "kg/m³",
+        "Air Content (%)": "%",
+        "Admixture (kg/m³)": "kg/m³"
     }
 
     # Create centered 3-column table

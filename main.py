@@ -231,14 +231,20 @@ if st.button("🧪 Compute Mix Design"):
         chart_type = st.radio("📈 Chart Type", ["Pie", "Bar"], horizontal=True)
         chart_data = {k.split(" (")[0]: v for k, v in result.items() if "kg/m³" in k and "Admixture" not in k}
 
+        # Prepare data for pie chart function
+        pie_data = {
+            'labels': list(chart_data.keys()),
+            'values': list(chart_data.values())
+        }
+
         fig_width = 4 if st.session_state.get('is_mobile', False) else 5
         fig, ax = plt.subplots(figsize=(fig_width, fig_width*0.75))
 
         if chart_type == "Pie":
-            ax.pie(chart_data.values(), labels=chart_data.keys(), autopct='%1.1f%%', startangle=90, textprops={'fontsize': 8})
+            ax.pie(pie_data['values'], labels=pie_data['labels'], autopct='%1.1f%%', startangle=90, textprops={'fontsize': 8})
             ax.axis('equal')
         else:
-            bars = ax.bar(chart_data.keys(), chart_data.values(), color='skyblue')
+            bars = ax.bar(pie_data['labels'], pie_data['values'], color='skyblue')
             ax.bar_label(bars, fmt='%.1f', padding=3, fontsize=8)
             ax.set_ylabel("Mass (kg/m³)")
             ax.set_title("Mix Composition")
@@ -251,7 +257,8 @@ if st.button("🧪 Compute Mix Design"):
     csv = df.to_csv().encode('utf-8')
     st.download_button(label="📥 Download CSV", data=csv, file_name="aci_mix.csv", mime='text/csv', use_container_width=True)
 
-    pie_buf = generate_pie_chart_image(chart_data)
+    # Pass the properly formatted data to the pie chart function
+    pie_buf = generate_pie_chart_image(pie_data)
     pdf_bytes = create_pdf_report(df, pie_buf)
     st.download_button("📄 Download PDF Report", pdf_bytes, file_name="mix_design_report.pdf", mime="application/pdf")
 

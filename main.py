@@ -162,7 +162,7 @@ def generate_pie_chart_image(data):
         st.error(f"Error generating pie chart: {str(e)}")
         return None
 
-def create_pdf_report(dataframe, pie_chart_buf=None, title=Concrete Mix Design Report):
+def create_pdf_report(dataframe, pie_chart_buf=None):
     """Create PDF report with mix design results."""
     try:
         pdf = FPDF()
@@ -206,30 +206,77 @@ def create_pdf_report(dataframe, pie_chart_buf=None, title=Concrete Mix Design R
         return None
         
 # --- Main UI Logic ---
-# In your main logic where you call generate_pie_chart_image:
 if st.button("🧪 Compute Mix Design"):
     result = calculate_mix()
-    # ... [other code] ...
+    st.write("### 📊 Mix Proportions:")
+
+    # Create DataFrame safely
+    if not isinstance(result, dict):
+        st.error("Invalid mix calculation results")
+        st.stop()
     
-    # Prepare chart data properly
-    chart_data = {k.split(" (")[0]: v for k, v in result.items() 
-                 if "kg/m³" in k and "Admixture" not in k and isinstance(v, (int, float))}
+    df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
     
-    # Generate pie chart only if we have valid data
+    col_table, col_chart = st.columns([2, 1])
+
+    with col_table:
+        st.dataframe(df.style.format(precision=2), height=min(len(result) * 45 + 50, 400), use_container_width=True)
+
+    with col_chart:
+        chart_type = st.radio("📈 Chart Type", ["Pie", "Bar"], horizontal=True)
+        
+        # Filter and prepare chart data
+        chart_data = {
+            k.split(" (")[0]: v for k, v in result.items() 
+            if isinstance(v, (int, float)) and "kg/m³" in k and "Admixture" not in k
+        }
+        
+        if not chart_data:
+            st.warning("No valid data for chart generation")
+        else:
+            fig_width = 4 if st.session_state.get('is_mobile', False) else 5
+            fig, ax = plt.subplots(figsize=(fig_width, fig_width*0.75))
+            
+            if chart_type == "Pie":
+                ax.pie(chart_data.values(), labels=chart_data.keys(), autopct='%1.1f%%', startangle=90)
+                ax.axis('equal')
+            else:
+                bars = ax.bar(chart_data.keys(), chart_data.values(), color='skyblue')
+                ax.bar_label(bars, fmt='%.1f', padding=3, fontsize=8)
+                ax.set_ylabel("Mass (kg/m³)")
+                plt.xticks(rotation=45, ha='right')
+            
+            plt.tight_layout()
+            st.pyplot(fig)
+            plt.close(fig)
+
+    # CSV Download
+    csv = df.to_csv().encode('utf-8')
+    st.download_button(
+        label="📥 Download CSV", 
+        data=csv, 
+        file_name="aci_mix.csv", 
+        mime='text/csv'
+    )
+
+    # PDF Download (only if we have valid data)
     if chart_data:
         pie_buf = generate_pie_chart_image(chart_data)
-        if pie_buf:  # Only proceed if we got a valid buffer
+        if pie_buf:
             pdf_bytes = create_pdf_report(df, pie_buf)
-            st.download_button(
-                "📄 Download PDF Report", 
-                pdf_bytes, 
-                file_name="mix_design_report.pdf", 
-                mime="application/pdf"
-            )
+            if pdf_bytes:
+                st.download_button(
+                    "📄 Download PDF Report", 
+                    pdf_bytes, 
+                    file_name="mix_design_report.pdf", 
+                    mime="application/pdf"
+                )
+            else:
+                st.warning("Failed to generate PDF report")
         else:
-            st.warning("Could not generate pie chart for PDF report")
+            st.warning("Failed to generate chart for PDF report")
     else:
-        st.warning("No valid data available for chart generation")
+        st.warning("No valid data available for PDF report generation")
 
 # --- Footer ---
 st.markdown("---")

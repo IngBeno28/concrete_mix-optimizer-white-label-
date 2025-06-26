@@ -112,118 +112,110 @@ def calculate_mix():
 
 
 def generate_pie_chart_image(data):
-    """Generate pie chart and return image buffer"""
-    fig, ax = plt.subplots()
-    ax.pie(data['values'], labels=data['labels'], autopct='%1.1f%%')
-    ax.axis('equal')
-    buf = io.BytesIO()
-    plt.savefig(buf, format='png', dpi=300)
-    buf.seek(0)
-    plt.close(fig)
-    return buf
+    """
+    Generate a pie chart image from composition data and return as bytes buffer.
     
-def create_pdf_report(dataframe, pie_chart_buf):
-    """Create a PDF report with centered logo, 3-column table (Parameter, Value, Unit), and visualization"""
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
+    Args:
+        data (dict): Dictionary containing 'labels' and 'values' keys
+        
+    Returns:
+        BytesIO: Buffer containing PNG image of the pie chart
+    """
+    try:
+        if not all(key in data for key in ['labels', 'values']):
+            raise ValueError("Data must contain 'labels' and 'values' keys")
+        if len(data['labels']) != len(data['values']):
+            raise ValueError("Labels and values must be of equal length")
+            
+        fig, ax = plt.subplots(figsize=(8, 8))
+        wedges, texts, autotexts = ax.pie(
+            data['values'],
+            labels=data['labels'],
+            autopct='%1.1f%%',
+            startangle=90,
+            textprops={'fontsize': 12}
+        )
+        ax.axis('equal')  # Equal aspect ratio ensures pie is circular
+        ax.set_title('Concrete Mix Composition', fontsize=14, pad=20)
+        
+        # Improve label appearance
+        plt.setp(autotexts, size=12, weight="bold")
+        plt.setp(texts, size=12)
+        
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+        buf.seek(0)
+        plt.close(fig)
+        return buf
+        
+    except Exception as e:
+        st.error(f"Error generating pie chart: {str(e)}")
+        return None
 
-    # Add centered logo if available
-    if LOGO_PATH and os.path.exists(LOGO_PATH):
-        try:
-            with Image.open(LOGO_PATH) as img:
-                width, height = img.size
-                aspect = height / width
-                logo_width_mm = 40
-                logo_height_mm = logo_width_mm * aspect
-                x_position = (210 - logo_width_mm) / 2
-                pdf.image(LOGO_PATH, x=x_position, y=10, w=logo_width_mm, h=logo_height_mm)
-                pdf.set_y(10 + logo_height_mm + 10)
-        except Exception as e:
-            st.warning(f"Could not add logo to PDF: {str(e)}")
-            pdf.set_y(10)
-    else:
-        pdf.set_y(10)
-
-    # Header information (centered)
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    pdf.cell(0, 10, txt=f"Project: {project_name}", ln=True, align='C')
-    pdf.cell(0, 10, txt=f"Report Generated: {now}", ln=True, align='C')
-    pdf.ln(10)
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, txt=APP_TITLE, ln=True, align='C')
-    pdf.set_font("Arial", size=12)
-    pdf.ln(15)
-
-    # Create mapping of parameters to units
-    units_mapping = {
-        "Target Mean Strength f't (MPa)": "MPa",
-        "Water (kg/m³)": "kg/m³",
-        "Cement (kg/m³)": "kg/m³",
-        "Fine Aggregate (kg/m³)": "kg/m³",
-        "Coarse Aggregate (kg/m³)": "kg/m³",
-        "Air Content (%)": "%",
-        "Admixture (kg/m³)": "kg/m³"
-    }
-
-    # Create centered 3-column table
-    col_widths = [80, 40, 30]  # Parameter, Value, Unit
-    table_width = sum(col_widths)
-    left_margin = (210 - table_width) / 2
+def create_pdf_report(dataframe, pie_chart_buf, title="Concrete Mix Design Report"):
+    """
+    Create a professional PDF report with mix design results and pie chart.
     
-    # Table Header (centered)
-    pdf.set_x(left_margin)
-    pdf.set_fill_color(200, 220, 255)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(col_widths[0], 8, "Parameter", border=1, fill=True, align='C')
-    pdf.cell(col_widths[1], 8, "Value", border=1, fill=True, align='C')
-    pdf.cell(col_widths[2], 8, "Unit", border=1, fill=True, ln=True, align='C')
-    pdf.set_font("Arial", size=12)
-    pdf.set_fill_color(255, 255, 255)
-
-    # Table Rows (centered)
-    fill = False
-    for index, row in dataframe.iterrows():
-        pdf.set_x(left_margin)
-        fill = not fill
-        pdf.set_fill_color(240, 240, 240) if fill else pdf.set_fill_color(255, 255, 255)
+    Args:
+        dataframe (pd.DataFrame): Mix design results
+        pie_chart_buf (BytesIO): Pie chart image buffer
+        title (str): Report title
         
-        # Clean parameter name by removing units in parentheses
-        clean_param = index.split(" (")[0] if " (" in index else index
-        unit = units_mapping.get(index, "")  # Get unit from mapping
+    Returns:
+        bytes: PDF file as bytes
+    """
+    try:
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_auto_page_break(auto=True, margin=15)
         
-        pdf.cell(col_widths[0], 8, clean_param, border=1, fill=True, align='L')  # Left-align parameter
-        pdf.cell(col_widths[1], 8, str(row['Value']), border=1, fill=True, align='C')  # Center-align value
-        pdf.cell(col_widths[2], 8, unit, border=1, fill=True, ln=True, align='C')  # Center-align unit
-
-    pdf.ln(10)
-
-    # Add centered pie chart if available
-    if pie_chart_buf:
-        try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
-                pie_chart_buf.seek(0)
-                tmp_file.write(pie_chart_buf.read())
-                tmp_file.flush()
-                
-                pdf.ln(5)
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(0, 10, "Mix Composition Visualization", ln=True, align='C')
-                pdf.image(tmp_file.name, x=(210-100)/2, y=None, w=100)
-                
-            os.unlink(tmp_file.name)
-        except Exception as e:
+        # Set document properties
+        pdf.set_title(title)
+        pdf.set_author("Concrete Mix Optimizer")
+        
+        # Add title
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(0, 10, title, ln=True, align='C')
+        pdf.ln(10)
+        
+        # Add pie chart if available
+        if pie_chart_buf:
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(0, 10, "Mix Composition", ln=True, align='C')
+            pdf.image(pie_chart_buf, x=50, w=110)
             pdf.ln(5)
-            pdf.set_font("Arial", "I", 10)
-            pdf.cell(0, 8, txt="Note: Visual chart is available in the web interface", ln=True, align='C')
-
-    # Centered footer
-    pdf.set_y(-30)
-    pdf.set_font("Arial", size=10)
-    pdf.cell(0, 10, txt=f"Generated by {CLIENT_NAME} | {FOOTER_NOTE}", ln=True, align='C')
-
-    return pdf.output(dest='S').encode('latin-1')
-
+        
+        # Add mix design table
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(0, 10, "Mix Design Parameters", ln=True, align='C')
+        pdf.ln(5)
+        
+        # Create table header
+        pdf.set_font("Arial", 'B', 10)
+        col_width = 40
+        row_height = 8
+        for col in dataframe.columns:
+            pdf.cell(col_width, row_height, str(col), border=1, align='C')
+        pdf.ln(row_height)
+        
+        # Add table rows
+        pdf.set_font("Arial", '', 10)
+        for _, row in dataframe.iterrows():
+            for col in dataframe.columns:
+                pdf.cell(col_width, row_height, str(row[col]), border=1)
+            pdf.ln(row_height)
+        
+        # Add footer
+        pdf.set_y(-15)
+        pdf.set_font("Arial", 'I', 8)
+        pdf.cell(0, 10, f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 0, 'C')
+        
+        return pdf.output(dest='S').encode('latin1')
+        
+    except Exception as e:
+        st.error(f"Error generating PDF report: {str(e)}")
+        return None
+        
 # --- Main UI Logic ---
 if st.button("🧪 Compute Mix Design"):
     result = calculate_mix()

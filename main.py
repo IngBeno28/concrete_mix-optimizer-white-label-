@@ -7,6 +7,7 @@ from fpdf import FPDF
 from PIL import Image
 import tempfile
 import os
+import io 
 from datetime import datetime
 
 # --- Streamlit Config ---

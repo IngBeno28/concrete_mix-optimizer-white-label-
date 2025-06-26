@@ -166,7 +166,7 @@ def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
         # --- Header Section ---
         # Add logo (ensure LOGO_PATH is correct in your branding.py)
         if LOGO_PATH and os.path.exists(LOGO_PATH):
-            pdf.image(LOGO_PATH, x=10, y=8, w=30)  # Adjust x,y,w as needed
+            pdf.image(assets/client_logo.png, x=10, y=8, w=30)  # Adjust x,y,w as needed
             
         # Report title and project info
         pdf.set_font("Arial", 'B', 16)

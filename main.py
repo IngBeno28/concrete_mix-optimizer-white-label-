@@ -291,18 +291,70 @@ if st.button("🧪 Compute Mix Design"):
 
         # PDF Generation
         if pie_chart_buf:
-            try:
-                pdf_bytes = create_pdf_report(result, pie_chart_buf, project_name)
-                if pdf_bytes:
-                    st.download_button(
-                        "📄 Download PDF Report", 
-                        pdf_bytes, 
-                        file_name=f"mix_design_{project_name.replace(' ', '_')}.pdf", 
-                        mime="application/pdf"
-                    )
-            except Exception as e:
-                st.error(f"PDF generation error: {str(e)}")
-            
+            pdf_bytes = create_pdf_report(result, pie_chart_buf, project_name)
+            if pdf_bytes:
+                st.download_button(
+                    "📄 Download PDF Report", 
+                    pdf_bytes, 
+                    file_name=f"mix_design_{project_name.replace(' ', '_')}.pdf", 
+                    mime="application/pdf"
+                )
+                
+    except Exception as e:
+        st.error(f"An error occurred during mix calculation: {str(e)}")
+
+# --- Footer ---
+st.markdown("---")
+st.caption(FOOTER_NOTE)# --- Main UI Logic ---
+if st.button("🧪 Compute Mix Design"):
+    try:
+        result = calculate_mix()
+        if not isinstance(result, dict):
+            raise ValueError("Invalid mix calculation results")
+        
+        st.write("### 📊 Mix Proportions:")
+        
+        # Create DataFrame for display
+        df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
+        
+        # Display results in two columns
+        col_table, col_chart = st.columns([2, 1])
+
+        with col_table:
+            st.dataframe(
+                df.style.format("{:.1f}").set_properties(**{'text-align': 'right'}),
+                height=min(len(result) * 45 + 50, 400),
+                use_container_width=True
+            )
+
+        with col_chart:
+            pie_chart_buf = generate_pie_chart_image(result)
+            if pie_chart_buf:
+                st.image(pie_chart_buf, caption="Mix Composition", use_column_width=True)
+
+        # CSV Download
+        csv = df.to_csv().encode('utf-8')
+        st.download_button(
+            label="📥 Download CSV", 
+            data=csv, 
+            file_name="concrete_mix.csv", 
+            mime='text/csv'
+        )
+
+        # PDF Generation
+        if pie_chart_buf:
+            pdf_bytes = create_pdf_report(result, pie_chart_buf, project_name)
+            if pdf_bytes:
+                st.download_button(
+                    "📄 Download PDF Report", 
+                    pdf_bytes, 
+                    file_name=f"mix_design_{project_name.replace(' ', '_')}.pdf", 
+                    mime="application/pdf"
+                )
+                
+    except Exception as e:
+        st.error(f"An error occurred during mix calculation: {str(e)}")
+
 # --- Footer ---
 st.markdown("---")
 st.caption(FOOTER_NOTE)

@@ -19,6 +19,25 @@ if 'mix_designs' not in st.session_state:
     st.session_state.mix_designs = []
 if 'show_new_design' not in st.session_state:
     st.session_state.show_new_design = False
+if 'default_params' not in st.session_state:
+    st.session_state.default_params = {
+        'fck': 25.0,
+        'std_dev': 5.0,
+        'exposure': 'Moderate',
+        'max_agg_size': 20,
+        'slump': 75,
+        'air_entrained': False,
+        'air_content': 5.0,
+        'wcm': 0.5,
+        'admixture': 0.0,
+        'fm': 2.7,
+        'sg_cement': 3.15,
+        'sg_fa': 2.65,
+        'sg_ca': 2.65,
+        'unit_weight_ca': 1600,
+        'moist_fa': 2.0,
+        'moist_ca': 1.0
+    }
 
 # Load CSS
 with open("style.css") as f:
@@ -51,32 +70,40 @@ st.markdown(f"<h2 style='color:{PRIMARY_COLOR};'>{APP_TITLE}</h2>", unsafe_allow
 
 project_name = st.text_input("📌 Project Name", "Unnamed Project")
 
+# Get current parameters based on whether we're showing a new design or modifying
+if st.session_state.show_new_design and st.session_state.mix_designs:
+    current_params = st.session_state.mix_designs[-1]['inputs']
+else:
+    current_params = st.session_state.default_params
+
 with st.expander("📋 ACI Design Inputs", expanded=True):
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        fck = st.number_input("f'c (MPa)", 10.0, 80.0, 25.0)
-        std_dev = st.number_input("Standard deviation (MPa)", 3.0, 10.0, 5.0)
-        exposure = st.selectbox("Exposure Class", list(ACI_EXPOSURE))
+        fck = st.number_input("f'c (MPa)", 10.0, 80.0, current_params['fck'])
+        std_dev = st.number_input("Standard deviation (MPa)", 3.0, 10.0, current_params['std_dev'])
+        exposure = st.selectbox("Exposure Class", list(ACI_EXPOSURE), 
+                              index=list(ACI_EXPOSURE).index(current_params['exposure']))
 
     with col2:
-        max_agg_size = st.selectbox("Max Aggregate Size (mm)", [10, 20, 40])
-        slump = st.slider("Slump (mm)", 25, 200, 75)
-        air_entrained = st.checkbox("Air Entrained", False)
-        air_content = st.slider("Target Air Content (%)", 1.0, 8.0, 5.0) if air_entrained else 0.0
+        max_agg_size = st.selectbox("Max Aggregate Size (mm)", [10, 20, 40], 
+                                  index=[10, 20, 40].index(current_params['max_agg_size']))
+        slump = st.slider("Slump (mm)", 25, 200, current_params['slump'])
+        air_entrained = st.checkbox("Air Entrained", current_params['air_entrained'])
+        air_content = st.slider("Target Air Content (%)", 1.0, 8.0, current_params['air_content']) if air_entrained else 0.0
 
     with col3:
-        wcm = st.number_input("w/c Ratio", 0.3, 0.7, 0.5)
-        admixture = st.number_input("Admixture (%)", 0.0, 5.0, 0.0)
-        fm = st.slider("FA Fineness Modulus", 2.4, 3.0, 2.7, step=0.1)
+        wcm = st.number_input("w/c Ratio", 0.3, 0.7, current_params['wcm'])
+        admixture = st.number_input("Admixture (%)", 0.0, 5.0, current_params['admixture'])
+        fm = st.slider("FA Fineness Modulus", 2.4, 3.0, current_params['fm'], step=0.1)
 
 with st.expander("🔬 Material Properties"):
-    sg_cement = st.number_input("Cement SG", 2.0, 3.5, 3.15)
-    sg_fa = st.number_input("Fine Aggregate SG", 2.4, 2.8, 2.65)
-    sg_ca = st.number_input("Coarse Aggregate SG", 2.4, 2.8, 2.65)
-    unit_weight_ca = st.number_input("CA Unit Weight (kg/m³)", 1400, 1800, 1600)
-    moist_fa = st.number_input("FA Moisture (%)", 0.0, 10.0, 2.0)
-    moist_ca = st.number_input("CA Moisture (%)", 0.0, 10.0, 1.0)
+    sg_cement = st.number_input("Cement SG", 2.0, 3.5, current_params['sg_cement'])
+    sg_fa = st.number_input("Fine Aggregate SG", 2.4, 2.8, current_params['sg_fa'])
+    sg_ca = st.number_input("Coarse Aggregate SG", 2.4, 2.8, current_params['sg_ca'])
+    unit_weight_ca = st.number_input("CA Unit Weight (kg/m³)", 1400, 1800, current_params['unit_weight_ca'])
+    moist_fa = st.number_input("FA Moisture (%)", 0.0, 10.0, current_params['moist_fa'])
+    moist_ca = st.number_input("CA Moisture (%)", 0.0, 10.0, current_params['moist_ca'])
 
 # --- Mix Design Logic ---
 @st.cache_data
@@ -432,6 +459,7 @@ else:
     with col2:
         if st.button("🆕 Start Fresh Design", key="fresh_design"):
             st.session_state.show_new_design = False
+            st.session_state.mix_designs = []  # Clear all previous designs
             st.rerun()
 
 # Display accumulated designs

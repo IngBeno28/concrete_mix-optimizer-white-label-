@@ -206,9 +206,11 @@ def create_pdf_report(data, chart_buf=None, project_name="Project"):
 
         # Pie Chart
         if chart_buf:
-            with tempfile.NamedTemporaryFile(delete=False) as tmp:
-                tmp.write(chart_buf.getvalue())
-                tmp_path = tmp.name
+            # In create_pdf_report():
+                with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp:
+                    Image.open(chart_buf).save(tmp, format='JPEG')  # ← Convert to JPEG
+                    pdf.image(tmp.name, x=50, w=110)  # ← FPDF supports JPEG
+                    os.unlink(tmp.name)  # ← Clean up
             
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(0, 10, "Mix Composition", ln=True, align='C')
@@ -270,7 +272,7 @@ if st.button("🧪 Compute Mix Design", key="compute_mix_button"):
             
             with col2:
                 if chart_buf:
-                    st.image(chart_buf, use_column_width=True)
+                    st.image(chart_buf, use_container_width=True)
                 else:
                     st.warning("No chart data available")
                 

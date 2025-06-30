@@ -266,6 +266,9 @@ if st.button("🧪 Compute Mix Design",  key="compute_mix_button"):
         
         # Create DataFrame for display
         df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
+        st.dataframe(
+    df.style.set_properties(**{'text-align': 'right'})
+)
         
         # Display results in two columns
         col_table, col_chart = st.columns([2, 1])

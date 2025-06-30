@@ -18,6 +18,7 @@ with open("style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # Display client logo if available
+LOGO_PATH = 
 if LOGO_PATH and os.path.exists(LOGO_PATH):
     st.image(LOGO_PATH, width=100)
 
@@ -159,6 +160,18 @@ def create_pdf_report(data, chart_buf=None, project_name="Project"):
         pdf = FPDF()
         pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
+        
+        if LOGO_PATH and os.path.exists(LOGO_PATH):
+            try:
+                # Add logo at top-right (10mm from top/right edges)
+                logo_width = 30
+                pdf.image(LOGO_PATH, x=(pdf.w - logo_width)/2, y=10, w=logo_width)
+                #pdf.image(LOGO_PATH, x=pdf.w - 40, y=10, w=30)  # Adjust width as needed
+                pdf.ln(25)  # Add space below logo
+            except Exception as e:
+                st.warning(f"Couldn't load logo: {str(e)}")
+
+
         
         # Header
         pdf.set_font("Arial", 'B', 16)

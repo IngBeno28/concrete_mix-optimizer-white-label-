@@ -179,9 +179,9 @@ def create_pdf_report(data, chart_buf=None, project_name="Project"):
         
         # Table header
         pdf.set_font("Arial", 'B', 10)
-        pdf.cell(col_widths[0], row_height, "Parameter", border=1, align='C')
-        pdf.cell(col_widths[1], row_height, "Value", border=1, align='C')
-        pdf.cell(col_widths[2], row_height, "Unit", border=1, align='C')
+        pdf.cell(col_widths[0], row_height, "Parameter", border=1, align='R')
+        pdf.cell(col_widths[1], row_height, "Value", border=1, align='L')
+        pdf.cell(col_widths[2], row_height, "Unit", border=1, align='R')
         pdf.ln(row_height)
         
         # Table content

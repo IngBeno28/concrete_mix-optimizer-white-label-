@@ -259,45 +259,45 @@ def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
         if st.button("🧪 Compute Mix Design",  key="compute_mix_button"):
            try:
     # Create DataFrame from results
-    df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
-    df = df.reset_index().rename(columns={'index': 'Material'})
-    
-    # Create styled DataFrame
-    styled_df = (
-        df.style
-        .set_properties(subset=['Value'], **{'text-align': 'right'})
-        .format({'Value': '{:.1f}'})
-    )
-    
-    # Create layout columns
-    col_table, col_chart = st.columns([2, 1])
-    
-    with col_table:
-        st.markdown("**Concrete Mix Composition**")
-        st.dataframe(
-            styled_df,
-            height=min(len(result) * 45 + 50, 400),
-            use_container_width=True
+        df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
+        df = df.reset_index().rename(columns={'index': 'Material'})
+        
+        # Create styled DataFrame
+        styled_df = (
+            df.style
+            .set_properties(subset=['Value'], **{'text-align': 'right'})
+            .format({'Value': '{:.1f}'})
         )
-    
-    with col_chart:
-        # Create pie chart (only for positive values)
-        pie_data = df[df['Value'] > 0]
-        if not pie_data.empty:
-            fig, ax = plt.subplots()
-            ax.pie(
-                pie_data['Value'],
-                labels=pie_data['Material'],
-                autopct='%1.1f%%',
-                startangle=90
+        
+        # Create layout columns
+        col_table, col_chart = st.columns([2, 1])
+        
+        with col_table:
+            st.markdown("**Concrete Mix Composition**")
+            st.dataframe(
+                styled_df,
+                height=min(len(result) * 45 + 50, 400),
+                use_container_width=True
             )
-            ax.axis('equal')
-            st.pyplot(fig)
-        else:
-            st.warning("No positive values to display in pie chart")
-
-except Exception as e:
-    st.error(f"An error occurred while displaying results: {str(e)}")
+        
+        with col_chart:
+            # Create pie chart (only for positive values)
+            pie_data = df[df['Value'] > 0]
+            if not pie_data.empty:
+                fig, ax = plt.subplots()
+                ax.pie(
+                    pie_data['Value'],
+                    labels=pie_data['Material'],
+                    autopct='%1.1f%%',
+                    startangle=90
+                )
+                ax.axis('equal')
+                st.pyplot(fig)
+            else:
+                st.warning("No positive values to display in pie chart")
+    
+    except Exception as e:
+        st.error(f"An error occurred while displaying results: {str(e)}")
 
         # CSV Download
         csv = df.to_csv().encode('utf-8')

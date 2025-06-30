@@ -18,7 +18,6 @@ with open("style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # Display client logo if available
-LOGO_PATH = 
 if LOGO_PATH and os.path.exists(LOGO_PATH):
     st.image(LOGO_PATH, width=100)
 

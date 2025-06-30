@@ -155,16 +155,19 @@ def generate_pie_chart(data):
         return None
 
 
+
 def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
-    """Generate a comprehensive PDF report with all mix designs including logo"""
+    """Generate a comprehensive PDF report with all mix designs"""
     try:
         pdf = FPDF()
         pdf.set_auto_page_break(auto=True, margin=15)
-
-        # --- Cover Page with Logo ---
-        pdf.add_page()
         
-        # Add logo if available
+        # Replace bullet points with asterisks in all text
+        def safe_text(text):
+            return text.replace('•', '*').replace('–', '-').replace('—', '-')
+        
+        # Cover Page
+        pdf.add_page()
         if LOGO_PATH and os.path.exists(LOGO_PATH):
             try:
                 with Image.open(LOGO_PATH) as img:
@@ -174,13 +177,13 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
                     img.save(temp_logo_path, format='JPEG', quality=95)
                     pdf.image(temp_logo_path, x=(pdf.w - 40)/2, y=30, w=40)
                     os.unlink(temp_logo_path)
-                pdf.ln(50)  # Space after logo
+                pdf.ln(50)
             except Exception as e:
                 st.error(f"Logo processing error: {str(e)}")
 
         # Cover page content
         pdf.set_font("Arial", 'B', 24)
-        pdf.cell(0, 15, "Concrete Mix Design Report", 0, 1, 'C')
+        pdf.cell(0, 15, safe_text("Concrete Mix Design Report"), 0, 1, 'C')
         pdf.set_font("Arial", '', 16)
         pdf.cell(0, 10, f"Project: {project_name}", 0, 1, 'C')
         pdf.cell(0, 10, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 1, 'C')

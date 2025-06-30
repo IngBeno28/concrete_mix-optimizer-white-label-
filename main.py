@@ -271,7 +271,7 @@ if st.session_state.mix_designs:
     
     if st.button("🧹 Clear Designs"):
         st.session_state.mix_designs = []
-        st.experimental_rerun()
+        st.rerun()
         
 # --- Footer ---
 st.markdown("---")

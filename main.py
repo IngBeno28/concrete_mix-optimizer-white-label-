@@ -170,12 +170,14 @@ def create_pdf_report(data, chart_buf=None, project_name="Project"):
 
         # Mix Design Table
         pdf.set_font("Arial", 'B', 12)
-        pdf.cell(0, 10, "Mix Design Parameters", ln=True, align='R')
+        pdf.cell(0, 10, "Mix Design Parameters", ln=True, align='C')
         pdf.ln(5)
         
-        # Table settings
-        col_widths = [70, 30, 30]
+        col_widths = [70, 30, 30]  # Keep your original column widths
         row_height = 8
+        table_width = sum(col_widths)  # Calculate total table width
+        page_width = pdf.w  # Get page width (210mm for A4 by default)
+        margin_left = (page_width - table_width) / 2  # Calculate left margin for centering
         
         # Table header
         pdf.set_font("Arial", 'B', 10)

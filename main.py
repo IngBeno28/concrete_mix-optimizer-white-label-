@@ -212,10 +212,10 @@ def create_pdf_report(data, chart_buf=None, project_name="Project"):
                     pdf.image(tmp.name, x=50, w=110)  # ← FPDF supports JPEG
                     os.unlink(tmp.name)  # ← Clean up
             
-            pdf.set_font("Arial", 'B', 12)
-            pdf.cell(0, 10, "Mix Composition", ln=True, align='C')
-            pdf.image(tmp_path, x=50, w=110)
-            os.unlink(tmp_path)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(0, 10, "Mix Composition", ln=True, align='C')
+        pdf.image(tmp_path, x=50, w=110)
+        os.unlink(tmp_path)
         
         # Footer
         pdf.set_y(-15)

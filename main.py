@@ -287,9 +287,16 @@ if st.button("🧪 Compute Mix Design",  key="compute_mix_button"):
            pass
             
         with col_chart:
-            pie_chart_buf = generate_pie_chart_image(result)
-            if pie_chart_buf:
-                st.image(pie_chart_buf, caption="Mix Composition", use_column_width=True)
+            # Create and display pie chart
+            fig, ax = plt.subplots()
+            ax.pie(
+                df['Value'],
+                labels=df['Material'],
+                autopct='%1.1f%%',
+                startangle=90
+            )
+            ax.axis('equal')  # Equal aspect ratio ensures circular pie
+            st.pyplot(fig)
 
         # CSV Download
         csv = df.to_csv().encode('utf-8')

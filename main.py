@@ -316,7 +316,7 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
             pdf.set_font("Arial", 'I', 8)
             pdf.cell(0, 10, f"Page {pdf.page_no()} | {CLIENT_NAME}", 0, 0, 'C')
 
-        return pdf.output(dest='S').encode('latin1')
+        return pdf.output(dest='S').encode('latin-1', errors='replace')
     except Exception as e:
         st.error(f"PDF generation failed: {str(e)}")
         return None

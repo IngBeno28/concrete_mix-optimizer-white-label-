@@ -281,7 +281,7 @@ if st.button("🧪 Compute Mix Design",  key="compute_mix_button"):
         st.dataframe(styled_df)
          
         # Display results in two columns
-        col_table, col_chart = st.columns([2, 1])
+        col_table, col_chart = st.columns([3, 1])
 
         with col_table:
            pass

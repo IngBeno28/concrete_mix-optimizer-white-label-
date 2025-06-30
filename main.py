@@ -253,49 +253,49 @@ def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
         st.error(f"PDF generation failed: {str(e)}")
         return None
 
-# --- Footer ---
-st.markdown("---")
-st.caption(FOOTER_NOTE)# --- Main UI Logic ---
-if st.button("🧪 Compute Mix Design",  key="compute_mix_button"):
-    try:
-        result = calculate_mix()
-        if not isinstance(result, dict):
-            raise ValueError("Invalid mix calculation results")
+        # --- Footer ---
+        st.markdown("---")
+        st.caption(FOOTER_NOTE)# --- Main UI Logic ---
+        if st.button("🧪 Compute Mix Design",  key="compute_mix_button"):
+            try:
+                result = calculate_mix()
+                if not isinstance(result, dict):
+                    raise ValueError("Invalid mix calculation results")
+                
+                st.write("### 📊 Mix Proportions:")
+                
+        df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
+        df = df.reset_index().rename(columns={'index': 'Material'})  # Convert index to column
         
-        st.write("### 📊 Mix Proportions:")
+        # Create styled DataFrame
+        styled_df = (
+            df.style
+            .set_properties(subset=['Value'], **{'text-align': 'right'})
+            .format({'Value': '{:.1f}'})
+        )
         
-df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
-df = df.reset_index().rename(columns={'index': 'Material'})  # Convert index to column
-
-# Create styled DataFrame
-styled_df = (
-    df.style
-    .set_properties(subset=['Value'], **{'text-align': 'right'})
-    .format({'Value': '{:.1f}'})
-)
-
-# Create two columns with your desired width ratio
-col_table, col_chart = st.columns([2, 1])
-
-with col_table:
-    st.markdown("**Concrete Mix Composition**")
-    st.dataframe(
-        styled_df,
-        height=min(len(result) * 45 + 50, 400),
-        use_container_width=True
-    )
-
-with col_chart:
-    # Create and display pie chart
-    fig, ax = plt.subplots()
-    ax.pie(
-        df['Value'],
-        labels=df['Material'],
-        autopct='%1.1f%%',
-        startangle=90
-    )
-    ax.axis('equal')  # Equal aspect ratio ensures circular pie
-    st.pyplot(fig)
+        # Create two columns with your desired width ratio
+        col_table, col_chart = st.columns([2, 1])
+        
+        with col_table:
+            st.markdown("**Concrete Mix Composition**")
+            st.dataframe(
+                styled_df,
+                height=min(len(result) * 45 + 50, 400),
+                use_container_width=True
+            )
+        
+        with col_chart:
+            # Create and display pie chart
+            fig, ax = plt.subplots()
+            ax.pie(
+                df['Value'],
+                labels=df['Material'],
+                autopct='%1.1f%%',
+                startangle=90
+            )
+            ax.axis('equal')  # Equal aspect ratio ensures circular pie
+            st.pyplot(fig)
 
         # CSV Download
         csv = df.to_csv().encode('utf-8')

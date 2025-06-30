@@ -170,7 +170,7 @@ def create_pdf_report(data, chart_buf=None, project_name="Project"):
 
         # Mix Design Table
         pdf.set_font("Arial", 'B', 12)
-        pdf.cell(0, 10, "Mix Design Parameters", ln=True, align='C')
+        pdf.cell(0, 10, "Mix Design Parameters", ln=True, align='R')
         pdf.ln(5)
         
         # Table settings

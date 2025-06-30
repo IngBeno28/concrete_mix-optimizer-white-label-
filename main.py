@@ -204,8 +204,8 @@ def create_pdf_report(data, chart_buf=None, project_name="Project"):
         pdf.cell(0, 10, f"Date: {datetime.now().strftime('%Y-%m-%d')}", ln=True, align='C')
         pdf.ln(15)
         
-            # Table settings - Center Aligned Version
-        col_widths = [70, 30, 30]  # Keep your original column widths
+            # Table settings 
+        col_widths = [70, 30, 30]  
         row_height = 8
         total_width = sum(col_widths)
         
@@ -241,7 +241,7 @@ def create_pdf_report(data, chart_buf=None, project_name="Project"):
         
         pdf.ln(10)
 
-        # Pie Chart Section - Fixed Version
+        # Pie Chart Section
         if chart_buf:
             try:
                 # Convert BytesIO to PIL Image
@@ -258,7 +258,7 @@ def create_pdf_report(data, chart_buf=None, project_name="Project"):
                 
                 # Add chart title and image to PDF
                 pdf.set_font("Arial", 'B', 12)
-                pdf.cell(0, 10, "Mix Composition", ln=True, align='C')
+                #pdf.cell(0, 10, "Mix Composition", ln=True, align='C')
                 pdf.image(tmp_path, x=50, w=110)
                 
                 # Clean up

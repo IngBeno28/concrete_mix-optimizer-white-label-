@@ -195,6 +195,14 @@ def create_pdf_report(data, chart_buf=None, project_name="Project"):
                 
             except Exception as e:
                 st.error(f"Logo Error: {str(e)}\nPath: {LOGO_PATH}\nExists: {os.path.exists(LOGO_PATH)}")
+                
+                        # --- Header ---
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(0, 10, "Concrete Mix Design Report", ln=True, align='C')
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, f"Project: {project_name}", ln=True, align='C')
+        pdf.cell(0, 10, f"Date: {datetime.now().strftime('%Y-%m-%d')}", ln=True, align='C')
+        pdf.ln(15)
         
             # Table settings - Center Aligned Version
         col_widths = [70, 30, 30]  # Keep your original column widths

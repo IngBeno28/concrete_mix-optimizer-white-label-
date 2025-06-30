@@ -264,39 +264,38 @@ if st.button("🧪 Compute Mix Design",  key="compute_mix_button"):
         
         st.write("### 📊 Mix Proportions:")
         
-        # Create DataFrame for display
-        df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
-        styled_df = (
-            df.style
-            .set_properties(**{'text-align': 'left'})  # Left-align index (material names)
-            .set_properties(subset=['Value'], **{'text-align': 'right'})  # Right-align values
-            .set_table_styles([{
-                'selector': 'th.col_heading',  # Target only the "Value" header
-                'props': [('text-align', 'right')]
-            }])
-            .format({'Value': '{:.1f}'})  # Format to 1 decimal place
-        )
-        
-        # Display in Streamlit
-        st.dataframe(styled_df)
-         
-        # Display results in two columns
-        col_table, col_chart = st.columns([2, 1])
+df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
+df = df.reset_index().rename(columns={'index': 'Material'})  # Convert index to column
 
-        with col_table:
-           pass
-            
-        with col_chart:
-            # Create and display pie chart
-            fig, ax = plt.subplots()
-            ax.pie(
-                df['Value'],
-                labels=df['Material'],
-                autopct='%1.1f%%',
-                startangle=90
-            )
-            ax.axis('equal')  # Equal aspect ratio ensures circular pie
-            st.pyplot(fig)
+# Create styled DataFrame
+styled_df = (
+    df.style
+    .set_properties(subset=['Value'], **{'text-align': 'right'})
+    .format({'Value': '{:.1f}'})
+)
+
+# Create two columns with your desired width ratio
+col_table, col_chart = st.columns([2, 1])
+
+with col_table:
+    st.markdown("**Concrete Mix Composition**")
+    st.dataframe(
+        styled_df,
+        height=min(len(result) * 45 + 50, 400),
+        use_container_width=True
+    )
+
+with col_chart:
+    # Create and display pie chart
+    fig, ax = plt.subplots()
+    ax.pie(
+        df['Value'],
+        labels=df['Material'],
+        autopct='%1.1f%%',
+        startangle=90
+    )
+    ax.axis('equal')  # Equal aspect ratio ensures circular pie
+    st.pyplot(fig)
 
         # CSV Download
         csv = df.to_csv().encode('utf-8')

@@ -124,14 +124,38 @@ def calculate_mix(
 
         cement = max(water / wcm, ACI_EXPOSURE[exposure]['min_cement'])
 
-                try:
-            ca_vol = ACI_CA_VOLUME[round(fm,1)][max_agg_size]
-        except:
-            ca_vol = ACI_CA_VOLUME[2.7][max_agg_size]
+# 1. Estimate water
+water = ACI_WATER_CONTENT["Air-Entrained" if air_entrained else "Non-Air-Entrained"][max_agg_size]
+water += (slump - 75) * 0.3
+if admixture:
+    water *= 1 - min(0.15, admixture * 0.05)
 
-        # --- Adjust CA volume based on slump for more realistic behavior ---
-        slump_correction = (slump - 75) * -0.001  # Decrease CA with higher slump
-        ca_vol = max(0.5, min(0.8, ca_vol + slump_correction))
+# 2. Estimate cement
+cement = max(water / wcm, ACI_EXPOSURE[exposure]['min_cement'])
+
+# 3. Volumes of knowns
+cement_vol = cement / (sg_cement * 1000)
+water_vol = water / 1000
+air_vol = air_content / 100 if air_entrained else 0.01
+
+# 4. Get base CA volume
+try:
+    base_ca_vol = ACI_CA_VOLUME[round(fm, 1)][max_agg_size]
+except:
+    base_ca_vol = ACI_CA_VOLUME[2.7][max_agg_size]
+
+# 5. Estimate CA mass and volume
+ca_mass = base_ca_vol * unit_weight_ca
+ca_vol = ca_mass / (sg_ca * 1000)
+
+# 6. Remaining volume goes to FA
+fa_vol = 1 - (cement_vol + water_vol + air_vol + ca_vol)
+fa_mass = fa_vol * sg_fa * 1000
+
+# 7. Adjust CA volume based on remaining volume (final step!)
+ca_vol = 1 - (cement_vol + water_vol + air_vol + fa_mass / (sg_fa * 1000))
+ca_mass = ca_vol * sg_ca * 1000
+
 
 
         ca_mass = ca_vol * unit_weight_ca

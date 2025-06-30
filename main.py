@@ -274,16 +274,17 @@ if st.button("🧪 Compute Mix Design", key="compute_mix_button"):
                 else:
                     st.warning("No chart data available")
                 
-                # PDF Download
+                # PDF Download - THIS IS THE CRUCIAL RESTORED SECTION
                 if chart_buf:
-                    pdf_bytes = create_pdf_report(result, chart_buf, project_name)
-                    if pdf_bytes:
-                        st.download_button(
-                            "📄 Download PDF Report",
-                            pdf_bytes,
-                            f"mix_design_{project_name}.pdf",
-                            "application/pdf"
-                        )
+                    with st.spinner("Generating PDF report..."):
+                        pdf_bytes = create_pdf_report(result, chart_buf, project_name)
+                        if pdf_bytes:
+                            st.download_button(
+                                "📄 Download PDF Report",
+                                pdf_bytes,
+                                f"mix_design_{project_name.replace(' ', '_')}.pdf",
+                                "application/pdf"
+                            )
 
 # --- Footer ---
 st.markdown("---")

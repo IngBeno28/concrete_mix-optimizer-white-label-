@@ -157,121 +157,296 @@ def generate_pie_chart(data):
 # Add to imports
 from typing import List, Dict, Optional
 
-# --- New PDF Generator ---
-def create_multi_design_pdf(designs: List[Dict], project_name: str) -> Optional[bytes]:
-    """Generate PDF with all designs from current session"""
-    try:
-        pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        
-        # Cover Page
+# PDF Generation Function
+def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
+    """Generate a comprehensive PDF report with all mix designs"""
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    # Cover Page
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 24)
+    pdf.cell(0, 40, "Concrete Mix Design Report", 0, 1, 'C')
+    pdf.set_font("Arial", '', 16)
+    pdf.cell(0, 10, f"Project: {project_name}", 0, 1, 'C')
+    pdf.cell(0, 10, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 1, 'C')
+    pdf.ln(20)
+    pdf.cell(0, 10, f"Total Designs: {len(designs)}", 0, 1, 'C')
+    
+    # Table of Contents
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(0, 10, "Table of Contents", 0, 1)
+    pdf.set_font("Arial", '', 12)
+    
+    for i, design in enumerate(designs, 1):
+        pdf.cell(0, 10, 
+                f"{i}. Design {i} - {design['data']['Target Mean Strength']} MPa (Page {i+2})", 
+                0, 1)
+    
+    # Design Pages
+    for i, design in enumerate(designs, 1):
         pdf.add_page()
-        pdf.set_font("Arial", 'B', 24)
-        pdf.cell(0, 40, "Concrete Mix Design Compendium", 0, 1, 'C')
-        pdf.set_font("Arial", '', 16)
-        pdf.cell(0, 10, f"Project: {project_name}", 0, 1, 'C')
-        pdf.cell(0, 10, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 1, 'C')
-        pdf.ln(20)
-        pdf.cell(0, 10, f"Total Designs: {len(designs)}", 0, 1, 'C')
         
-        # Design Sections
-        for idx, design in enumerate(designs, 1):
-            pdf.add_page()
-            
-            # Header
-            pdf.set_font("Arial", 'B', 16)
-            pdf.cell(0, 10, f"Design #{idx}", 0, 1)
-            pdf.set_font("Arial", '', 12)
-            pdf.cell(0, 10, f"Target Strength: {design['data']['Target Mean Strength']} MPa", 0, 1)
-            pdf.ln(5)
-            
-            # Parameters Table
-            col_width = 60
-            pdf.set_font("Arial", 'B', 10)
-            pdf.cell(col_width, 8, "Parameter", 1)
-            pdf.cell(col_width, 8, "Value", 1)
-            pdf.cell(col_width, 8, "Unit", 1)
+        # Header
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(0, 10, f"Design #{i}", 0, 1)
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, f"Target Strength: {design['data']['Target Mean Strength']} MPa", 0, 1)
+        pdf.cell(0, 10, f"Calculated: {design['timestamp']}", 0, 1)
+        pdf.ln(10)
+        
+        # Parameters Table
+        col_widths = [70, 30, 30]
+        pdf.set_font("Arial", 'B', 10)
+        pdf.cell(col_widths[0], 8, "Parameter", 1)
+        pdf.cell(col_widths[1], 8, "Value", 1)
+        pdf.cell(col_widths[2], 8, "Unit", 1)
+        pdf.ln(8)
+        
+        pdf.set_font("Arial", '', 10)
+        units = {
+            "Target Mean Strength": "MPa",
+            "Water": "kg/m³",
+            "Cement": "kg/m³", 
+            "Fine Aggregate": "kg/m³",
+            "Coarse Aggregate": "kg/m³",
+            "Air Content": "%",
+            "Admixture": "kg/m³"
+        }
+        
+        for param, value in design['data'].items():
+            pdf.cell(col_widths[0], 8, param, 1)
+            pdf.cell(col_widths[1], 8, f"{value:.2f}", 1)
+            pdf.cell(col_widths[2], 8, units.get(param, "-"), 1)
             pdf.ln(8)
-            
-            pdf.set_font("Arial", '', 10)
-            units = {
-                "Target Mean Strength": "MPa",
-                "Water": "kg/m³",
-                "Cement": "kg/m³",
-                "Fine Aggregate": "kg/m³", 
-                "Coarse Aggregate": "kg/m³",
-                "Air Content": "%",
-                "Admixture": "kg/m³"
-            }
-            
-            for param, value in design['data'].items():
-                pdf.cell(col_width, 8, param, 1)
-                pdf.cell(col_width, 8, f"{value:.2f}", 1)
-                pdf.cell(col_width, 8, units.get(param, "-"), 1)
-                pdf.ln(8)
-            
-            # Chart
-            if design.get('chart'):
-                try:
-                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
-                        Image.open(design['chart']).save(tmp.name)
-                        pdf.image(tmp.name, x=50, y=pdf.get_y()+5, w=100)
-                        os.unlink(tmp.name)
-                except Exception as e:
-                    st.error(f"Chart rendering error: {e}")
-            
-            # Page Footer
-            pdf.set_y(-15)
-            pdf.set_font("Arial", 'I', 8)
-            pdf.cell(0, 10, f"Design {idx} of {len(designs)}", 0, 0, 'C')
         
-        return pdf.output(dest='S').encode('latin1')
-    except Exception as e:
-        st.error(f"PDF generation error: {e}")
-        return None
+        # Input Parameters Section
+        pdf.ln(10)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(0, 10, "Design Parameters Used:", 0, 1)
+        pdf.set_font("Arial", '', 10)
+        
+        # Group parameters into columns
+        params = design['inputs']
+        col1 = [
+            f"f'c: {params['fck']} MPa",
+            f"Std Dev: {params['std_dev']} MPa",
+            f"Exposure: {params['exposure']}",
+            f"Max Agg: {params['max_agg_size']} mm"
+        ]
+        
+        col2 = [
+            f"Slump: {params['slump']} mm",
+            f"Air Entrained: {'Yes' if params['air_entrained'] else 'No'}",
+            f"Air Content: {params['air_content']}%" if params['air_entrained'] else "",
+            f"w/c Ratio: {params['wcm']}"
+        ]
+        
+        col3 = [
+            f"Admixture: {params['admixture']}%",
+            f"FM: {params['fm']}",
+            f"Cement SG: {params['sg_cement']}",
+            f"FA SG: {params['sg_fa']}"
+        ]
+        
+        # Display parameter columns
+        pdf.set_x(20)
+        for line in range(max(len(col1), len(col2), len(col3))):
+            if line < len(col1):
+                pdf.cell(60, 8, col1[line])
+            else:
+                pdf.cell(60, 8, "")
+                
+            if line < len(col2):
+                pdf.cell(60, 8, col2[line])
+            else:
+                pdf.cell(60, 8, "")
+                
+            if line < len(col3):
+                pdf.cell(60, 8, col3[line])
+            else:
+                pdf.cell(60, 8, "")
+            pdf.ln(8)
+        
+        # Pie Chart
+        if design.get('chart'):
+            try:
+                with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                    Image.open(design['chart']).convert('RGB').save(tmp.name)
+                    pdf.image(tmp.name, x=50, y=pdf.get_y()+10, w=100)
+                    os.unlink(tmp.name)
+            except Exception as e:
+                st.error(f"Chart error: {str(e)}")
+        
+        # Page footer
+        pdf.set_y(-15)
+        pdf.set_font("Arial", 'I', 8)
+        pdf.cell(0, 10, f"Page {pdf.page_no()} - Design {i} of {len(designs)}", 0, 0, 'C')
+    
+    # Final footer
+    pdf.set_y(-15)
+    pdf.set_font("Arial", 'I', 8)
+    pdf.cell(0, 10, f"Generated by {CLIENT_NAME}", 0, 0, 'C')
+    
+    return pdf.output(dest='S').encode('latin1')
 
 # --- Modified Main Logic ---
 if 'mix_designs' not in st.session_state:
     st.session_state.mix_designs = []
 
-if st.button("🧪 Compute Mix Design"):
-    result = calculate_mix()
-    if result:
-        chart = generate_pie_chart(result)
-        st.session_state.mix_designs.append({
-            'data': result,
-            'chart': chart,
-            'timestamp': datetime.now().strftime("%H:%M:%S")
-        })
-        st.success(f"Design added! Total: {len(st.session_state.mix_designs)}")
+# --- Main Application Logic ---
+if 'mix_designs' not in st.session_state:
+    st.session_state.mix_designs = []
+if 'show_new_design' not in st.session_state:
+    st.session_state.show_new_design = False
 
-# Display current designs
+# Compute or Start New Design button
+if not st.session_state.show_new_design:
+    if st.button("🧪 Compute Mix Design"):
+        result = calculate_mix()
+        if result:
+            chart_buf = generate_pie_chart(result)
+            st.session_state.mix_designs.append({
+                'data': result,
+                'chart': chart_buf,
+                'timestamp': datetime.now().strftime("%H:%M:%S"),
+                'inputs': {
+                    'fck': fck,
+                    'std_dev': std_dev,
+                    'exposure': exposure,
+                    'max_agg_size': max_agg_size,
+                    'slump': slump,
+                    'air_entrained': air_entrained,
+                    'air_content': air_content,
+                    'wcm': wcm,
+                    'admixture': admixture,
+                    'fm': fm,
+                    'sg_cement': sg_cement,
+                    'sg_fa': sg_fa,
+                    'sg_ca': sg_ca,
+                    'unit_weight_ca': unit_weight_ca,
+                    'moist_fa': moist_fa,
+                    'moist_ca': moist_ca
+                }
+            })
+            st.success("Mix design calculated and saved!")
+            st.session_state.show_new_design = True  # Show option to start new design
+            st.rerun()
+else:
+    # Display current parameters with option to modify
+    with st.expander("⚙️ Current Parameters (Click to Modify)", expanded=True):
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            fck = st.number_input("f'c (MPa)", 10.0, 80.0, st.session_state.mix_designs[-1]['inputs']['fck'])
+            std_dev = st.number_input("Standard deviation (MPa)", 3.0, 10.0, st.session_state.mix_designs[-1]['inputs']['std_dev'])
+            exposure = st.selectbox("Exposure Class", list(ACI_EXPOSURE), index=list(ACI_EXPOSURE).index(st.session_state.mix_designs[-1]['inputs']['exposure']))
+
+        with col2:
+            max_agg_size = st.selectbox("Max Aggregate Size (mm)", [10, 20, 40], index=[10, 20, 40].index(st.session_state.mix_designs[-1]['inputs']['max_agg_size']))
+            slump = st.slider("Slump (mm)", 25, 200, st.session_state.mix_designs[-1]['inputs']['slump'])
+            air_entrained = st.checkbox("Air Entrained", st.session_state.mix_designs[-1]['inputs']['air_entrained'])
+            air_content = st.slider("Target Air Content (%)", 1.0, 8.0, st.session_state.mix_designs[-1]['inputs']['air_content']) if air_entrained else 0.0
+
+        with col3:
+            wcm = st.number_input("w/c Ratio", 0.3, 0.7, st.session_state.mix_designs[-1]['inputs']['wcm'])
+            admixture = st.number_input("Admixture (%)", 0.0, 5.0, st.session_state.mix_designs[-1]['inputs']['admixture'])
+            fm = st.slider("FA Fineness Modulus", 2.4, 3.0, st.session_state.mix_designs[-1]['inputs']['fm'], step=0.1)
+
+    # Material Properties (collapsed by default)
+    with st.expander("🔬 Material Properties (Click to Modify)"):
+        sg_cement = st.number_input("Cement SG", 2.0, 3.5, st.session_state.mix_designs[-1]['inputs']['sg_cement'])
+        sg_fa = st.number_input("Fine Aggregate SG", 2.4, 2.8, st.session_state.mix_designs[-1]['inputs']['sg_fa'])
+        sg_ca = st.number_input("Coarse Aggregate SG", 2.4, 2.8, st.session_state.mix_designs[-1]['inputs']['sg_ca'])
+        unit_weight_ca = st.number_input("CA Unit Weight (kg/m³)", 1400, 1800, st.session_state.mix_designs[-1]['inputs']['unit_weight_ca'])
+        moist_fa = st.number_input("FA Moisture (%)", 0.0, 10.0, st.session_state.mix_designs[-1]['inputs']['moist_fa'])
+        moist_ca = st.number_input("CA Moisture (%)", 0.0, 10.0, st.session_state.mix_designs[-1]['inputs']['moist_ca'])
+
+    # Action buttons
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔄 Compute With Modified Parameters"):
+            result = calculate_mix()
+            if result:
+                chart_buf = generate_pie_chart(result)
+                st.session_state.mix_designs.append({
+                    'data': result,
+                    'chart': chart_buf,
+                    'timestamp': datetime.now().strftime("%H:%M:%S"),
+                    'inputs': {
+                        'fck': fck,
+                        'std_dev': std_dev,
+                        'exposure': exposure,
+                        'max_agg_size': max_agg_size,
+                        'slump': slump,
+                        'air_entrained': air_entrained,
+                        'air_content': air_content,
+                        'wcm': wcm,
+                        'admixture': admixture,
+                        'fm': fm,
+                        'sg_cement': sg_cement,
+                        'sg_fa': sg_fa,
+                        'sg_ca': sg_ca,
+                        'unit_weight_ca': unit_weight_ca,
+                        'moist_fa': moist_fa,
+                        'moist_ca': moist_ca
+                    }
+                })
+                st.success("New mix design calculated!")
+                st.rerun()
+    
+    with col2:
+        if st.button("🆕 Start Fresh Design"):
+            st.session_state.show_new_design = False
+            st.rerun()
+
+# Display accumulated designs
 if st.session_state.mix_designs:
-    st.subheader("Accumulated Designs")
+    st.subheader(f"📚 Accumulated Designs ({len(st.session_state.mix_designs)})")
+    
     for i, design in enumerate(st.session_state.mix_designs, 1):
-        with st.expander(f"Design #{i} - {design['data']['Target Mean Strength']} MPa"):
-            st.write(design['data'])
-            if design.get('chart'):
-                st.image(design['chart'])
-    
-    # PDF Generation
-    if st.button("📄 Generate Master PDF"):
-        with st.spinner(f"Compiling {len(st.session_state.mix_designs)} designs..."):
-            pdf_bytes = create_multi_design_pdf(
-                st.session_state.mix_designs,
-                project_name
-            )
-            if pdf_bytes:
-                st.download_button(
-                    "💾 Download Full Report",
-                    pdf_bytes,
-                    f"concrete_mix_designs_{project_name}.pdf",
-                    "application/pdf"
+        with st.expander(f"Design #{i} - {design['data']['Target Mean Strength']} MPa (Click to View)", expanded=(i==len(st.session_state.mix_designs))):
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                st.dataframe(
+                    pd.DataFrame.from_dict(design['data'], orient='index', columns=['Value']),
+                    height=300,
+                    use_container_width=True
                 )
+            
+            with col2:
+                if design.get('chart'):
+                    st.image(design['chart'], use_container_width=True)
+            
+            st.caption(f"Calculated at {design['timestamp']}")
+
+    # Master PDF and Clear options
+    st.markdown("---")
+    col1, col2 = st.columns(2)
     
-    if st.button("🧹 Clear Designs"):
-        st.session_state.mix_designs = []
-        st.rerun()
+    with col1:
+        if st.button("📄 Generate Master PDF"):
+            with st.spinner(f"Compiling {len(st.session_state.mix_designs)} designs..."):
+                pdf_bytes = create_pdf_report_multiple(
+                    st.session_state.mix_designs,
+                    project_name
+                )
+                if pdf_bytes:
+                    st.download_button(
+                        "💾 Download Full Report",
+                        pdf_bytes,
+                        f"concrete_mix_designs_{project_name}.pdf",
+                        "application/pdf"
+                    )
+    
+    with col2:
+        if st.button("🧹 Clear All Designs"):
+            st.session_state.mix_designs = []
+            st.session_state.show_new_design = False
+            st.success("All designs cleared!")
+            st.rerun()
         
 # --- Footer ---
 st.markdown("---")

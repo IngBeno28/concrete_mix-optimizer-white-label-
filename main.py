@@ -265,9 +265,7 @@ if st.button("🧪 Compute Mix Design",  key="compute_mix_button"):
         st.write("### 📊 Mix Proportions:")
         
         # Create DataFrame for display
-       df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
-
-        # Custom styling
+        df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
         styled_df = (
             df.style
             .set_properties(**{'text-align': 'left'})  # Left-align index (material names)

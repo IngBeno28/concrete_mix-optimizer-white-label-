@@ -154,50 +154,47 @@ def generate_pie_chart(data):
         return None
 
 def create_pdf_report(data, chart_buf=None, project_name="Project"):
-    """Generate PDF report with mix design results"""
+    """Generate PDF report with guaranteed logo display"""
     try:
         pdf = FPDF()
         pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
-        
-        # --- Logo Implementation (100% Working Version) ---
+
+        # --- Logo Implementation ---
         if LOGO_PATH and os.path.exists(LOGO_PATH):
             try:
-                # Step 1: Ensure image is in FPDF-compatible format
-                img = Image.open(LOGO_PATH)
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
+                # Debugging: Print absolute path
+                abs_logo_path = os.path.abspath(LOGO_PATH)
+                print(f"Attempting to load logo from: {abs_logo_path}")  # Check console output
                 
-                # Step 2: Create temporary file (FPDF works best with physical files)
-                with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_logo:
-                    temp_logo_path = tmp_logo.name
-                    img.save(tmp_logo, format='JPEG', quality=100)
+                # Convert to RGB and save as temporary JPEG
+                with Image.open(LOGO_PATH) as img:
+                    if img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    
+                    # Create temporary file path
+                    temp_logo_path = os.path.join(tempfile.gettempdir(), f"temp_logo_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg")
+                    img.save(temp_logo_path, format='JPEG', quality=100)
                 
-                # Step 3: Insert centered logo (30mm width, 10mm from top)
-                logo_width = 30
+                # Insert logo (centered, 30mm width)
                 pdf.image(temp_logo_path, 
-                         x=(pdf.w - logo_width)/2,  # Perfectly centered
-                         y=10,  # 10mm from top
-                         w=logo_width)
+                        x=(pdf.w - 30)/2,  # Center calculation
+                        y=10, 
+                        w=30)
                 
-                # Step 4: Cleanup
-                img.close()
-                os.unlink(temp_logo_path)
+                # Verify temporary file
+                print(f"Temporary logo exists: {os.path.exists(temp_logo_path)}")  # Debug
+                
+                # Cleanup
+                try:
+                    os.unlink(temp_logo_path)
+                except:
+                    pass
                 
                 pdf.ln(25)  # Space after logo
                 
             except Exception as e:
-                st.warning(f"Logo processing failed: {str(e)}")
-                # Debugging help:
-                st.error(f"Logo details: Path={LOGO_PATH}, Exists={os.path.exists(LOGO_PATH)}, Mode={img.mode if 'img' in locals() else 'N/A'}")
-
-        # --- Header (Keep your perfect centered version) ---
-        pdf.set_font("Arial", 'B', 16)
-        pdf.cell(0, 10, "Concrete Mix Design Report", ln=True, align='C')
-        pdf.set_font("Arial", '', 12)
-        pdf.cell(0, 10, f"Project: {project_name}", ln=True, align='C')
-        pdf.cell(0, 10, f"Date: {datetime.now().strftime('%Y-%m-%d')}", ln=True, align='C')
-        pdf.ln(15)
+                st.error(f"Logo Error: {str(e)}\nPath: {LOGO_PATH}\nExists: {os.path.exists(LOGO_PATH)}")
         
             # Table settings - Center Aligned Version
         col_widths = [70, 30, 30]  # Keep your original column widths

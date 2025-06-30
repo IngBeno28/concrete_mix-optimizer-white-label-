@@ -8,6 +8,7 @@ from PIL import Image
 import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
+from typing import List, Dict, Optional
 from branding import CLIENT_NAME, APP_TITLE, PRIMARY_COLOR, LOGO_PATH, FOOTER_NOTE
 
 # --- Streamlit Config ---
@@ -153,194 +154,125 @@ def generate_pie_chart(data):
         st.error(f"Chart error: {str(e)}")
         return None
 
-def create_pdf_report(data, chart_buf=None, project_name="Project"):
-    """Generate PDF report with guaranteed logo display"""
+# Add to imports
+from typing import List, Dict, Optional
+
+# --- New PDF Generator ---
+def create_multi_design_pdf(designs: List[Dict], project_name: str) -> Optional[bytes]:
+    """Generate PDF with all designs from current session"""
     try:
         pdf = FPDF()
-        pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
-
-        # --- Logo Implementation ---
-        if LOGO_PATH and os.path.exists(LOGO_PATH):
-            try:
-                # Debugging: Print absolute path
-                abs_logo_path = os.path.abspath(LOGO_PATH)
-                print(f"Attempting to load logo from: {abs_logo_path}")  # Check console output
-                
-                # Convert to RGB and save as temporary JPEG
-                with Image.open(LOGO_PATH) as img:
-                    if img.mode != 'RGB':
-                        img = img.convert('RGB')
-                    
-                    # Create temporary file path
-                    temp_logo_path = os.path.join(tempfile.gettempdir(), f"temp_logo_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg")
-                    img.save(temp_logo_path, format='JPEG', quality=100)
-                
-                # Insert logo (centered, 30mm width)
-                pdf.image(temp_logo_path, 
-                        x=(pdf.w - 30)/2,  # Center calculation
-                        y=10, 
-                        w=30)
-                
-                # Verify temporary file
-                print(f"Temporary logo exists: {os.path.exists(temp_logo_path)}")  # Debug
-                
-                # Cleanup
-                try:
-                    os.unlink(temp_logo_path)
-                except:
-                    pass
-                
-                pdf.ln(25)  # Space after logo
-                
-            except Exception as e:
-                st.error(f"Logo Error: {str(e)}\nPath: {LOGO_PATH}\nExists: {os.path.exists(LOGO_PATH)}")
-                
-        # --- Header ---
-        pdf.set_font("Arial", 'B', 16)
-        pdf.cell(0, 10, "Concrete Mix Design Report", ln=True, align='C')
-        pdf.set_font("Arial", '', 12)
-        pdf.cell(0, 10, f"Project: {project_name}", ln=True, align='C')
-        pdf.cell(0, 10, f"Date: {datetime.now().strftime('%Y-%m-%d')}", ln=True, align='C')
-        pdf.ln(15)
         
-        # Table settings 
-        col_widths = [70, 30, 30]  
-        row_height = 8
-        total_width = sum(col_widths)
+        # Cover Page
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 24)
+        pdf.cell(0, 40, "Concrete Mix Design Compendium", 0, 1, 'C')
+        pdf.set_font("Arial", '', 16)
+        pdf.cell(0, 10, f"Project: {project_name}", 0, 1, 'C')
+        pdf.cell(0, 10, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 1, 'C')
+        pdf.ln(20)
+        pdf.cell(0, 10, f"Total Designs: {len(designs)}", 0, 1, 'C')
         
-        # Calculate left margin to center the table
-        left_margin = (pdf.w - total_width) / 2
-        
-        # Table header - Centered
-        pdf.set_font("Arial", 'B', 10)
-        pdf.set_x(left_margin)  # This is the key line for centering
-        pdf.cell(col_widths[0], row_height, "Parameter", border=1, align='C')
-        pdf.cell(col_widths[1], row_height, "Value", border=1, align='C')
-        pdf.cell(col_widths[2], row_height, "Unit", border=1, align='C')
-        pdf.ln(row_height)
-        
-        # Table content - Centered
-        pdf.set_font("Arial", '', 10)
-        units = {
-            "Target Mean Strength": "MPa",
-            "Water": "kg/m³",
-            "Cement": "kg/m³",
-            "Fine Aggregate": "kg/m³",
-            "Coarse Aggregate": "kg/m³",
-            "Air Content": "%",
-            "Admixture": "kg/m³"
-        }
-        
-        for param, value in data.items():
-            pdf.set_x(left_margin)  # Reset to center position for each row
-            pdf.cell(col_widths[0], row_height, param, border=1)
-            pdf.cell(col_widths[1], row_height, f"{value:.2f}", border=1, align='C')
-            pdf.cell(col_widths[2], row_height, units.get(param, ""), border=1, align='C')
-            pdf.ln(row_height)
-        
-        pdf.ln(10)
-
-        # Pie Chart Section
-        if chart_buf:
-            try:
-                # Convert BytesIO to PIL Image
-                img = Image.open(chart_buf)
-                
-                # Convert RGBA to RGB if needed
-                if img.mode == 'RGBA':
-                    img = img.convert('RGB')
-                
-                # Save to temporary file
-                with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp:
-                    img.save(tmp, format='JPEG', quality=95)
-                    tmp_path = tmp.name
-                
-                # Add chart title and image to PDF
-                pdf.set_font("Arial", 'B', 12)
-                #pdf.cell(0, 10, "Mix Composition", ln=True, align='C')
-                pdf.image(tmp_path, x=50, w=110)
-                
-                # Clean up
-                img.close()
-                os.unlink(tmp_path)
-                
-            except Exception as e:
-                st.error(f"Chart image error: {str(e)}")
-
-        # --- Footer ---
-        if pdf.get_y() > pdf.h - 30: 
-            pdf.ln(10)  # Add some space
+        # Design Sections
+        for idx, design in enumerate(designs, 1):
+            pdf.add_page()
             
-        pdf.set_y(-15)  # 15mm from bottom
-        pdf.set_font("Arial", 'I', 8)
-        pdf.cell(0, 10, f"Generated by {CLIENT_NAME}", 0, 0, 'C')
-                
+            # Header
+            pdf.set_font("Arial", 'B', 16)
+            pdf.cell(0, 10, f"Design #{idx}", 0, 1)
+            pdf.set_font("Arial", '', 12)
+            pdf.cell(0, 10, f"Target Strength: {design['data']['Target Mean Strength']} MPa", 0, 1)
+            pdf.ln(5)
+            
+            # Parameters Table
+            col_width = 60
+            pdf.set_font("Arial", 'B', 10)
+            pdf.cell(col_width, 8, "Parameter", 1)
+            pdf.cell(col_width, 8, "Value", 1)
+            pdf.cell(col_width, 8, "Unit", 1)
+            pdf.ln(8)
+            
+            pdf.set_font("Arial", '', 10)
+            units = {
+                "Target Mean Strength": "MPa",
+                "Water": "kg/m³",
+                "Cement": "kg/m³",
+                "Fine Aggregate": "kg/m³", 
+                "Coarse Aggregate": "kg/m³",
+                "Air Content": "%",
+                "Admixture": "kg/m³"
+            }
+            
+            for param, value in design['data'].items():
+                pdf.cell(col_width, 8, param, 1)
+                pdf.cell(col_width, 8, f"{value:.2f}", 1)
+                pdf.cell(col_width, 8, units.get(param, "-"), 1)
+                pdf.ln(8)
+            
+            # Chart
+            if design.get('chart'):
+                try:
+                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                        Image.open(design['chart']).save(tmp.name)
+                        pdf.image(tmp.name, x=50, y=pdf.get_y()+5, w=100)
+                        os.unlink(tmp.name)
+                except Exception as e:
+                    st.error(f"Chart rendering error: {e}")
+            
+            # Page Footer
+            pdf.set_y(-15)
+            pdf.set_font("Arial", 'I', 8)
+            pdf.cell(0, 10, f"Design {idx} of {len(designs)}", 0, 0, 'C')
+        
         return pdf.output(dest='S').encode('latin1')
     except Exception as e:
-        st.error(f"PDF generation failed: {str(e)}")
+        st.error(f"PDF generation error: {e}")
         return None
 
-# --- Main Application Logic ---
-if st.button("🧪 Compute Mix Design", key="compute_mix_button"):
-    with st.spinner("Calculating optimal mix..."):
-        result = calculate_mix()
-        
-        if result:
-            st.success("Mix design calculated successfully!")
-            
-            # Create DataFrame
-            df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
-            df = df.reset_index().rename(columns={'index': 'Material'})
-            
-            # Format DataFrame
-            styled_df = (
-                df.style
-                .set_properties(subset=['Value'], **{'text-align': 'right'})
-                .format({'Value': '{:.1f}'})
-            )
-            
-            # Generate chart
-            chart_buf = generate_pie_chart(result)
-            
-            # Display results
-            col1, col2 = st.columns([2, 1])
-            
-            with col1:
-                st.markdown("### Concrete Mix Composition")
-                st.dataframe(
-                    styled_df,
-                    height=min(len(result)*35 + 50, 400),
-                    use_container_width=True
-                )
-                
-                # CSV Download
-                csv = df.to_csv(index=False).encode('utf-8')
-                st.download_button(
-                    "📥 Download CSV",
-                    csv,
-                    "concrete_mix.csv",
-                    "text/csv"
-                )
-            
-            with col2:
-                if chart_buf:
-                    st.image(chart_buf, use_container_width=True)
-                else:
-                    st.warning("No chart data available")
-                
-                # PDF Download - THIS IS THE CRUCIAL RESTORED SECTION
-                if chart_buf:
-                    with st.spinner("Generating PDF report..."):
-                        pdf_bytes = create_pdf_report(result, chart_buf, project_name)
-                        if pdf_bytes:
-                            st.download_button(
-                                "📄 Download PDF Report",
-                                pdf_bytes,
-                                f"mix_design_{project_name.replace(' ', '_')}.pdf",
-                                "application/pdf"
-                            )
+# --- Modified Main Logic ---
+if 'mix_designs' not in st.session_state:
+    st.session_state.mix_designs = []
 
+if st.button("🧪 Compute Mix Design"):
+    result = calculate_mix()
+    if result:
+        chart = generate_pie_chart(result)
+        st.session_state.mix_designs.append({
+            'data': result,
+            'chart': chart,
+            'timestamp': datetime.now().strftime("%H:%M:%S")
+        })
+        st.success(f"Design added! Total: {len(st.session_state.mix_designs)}")
+
+# Display current designs
+if st.session_state.mix_designs:
+    st.subheader("Accumulated Designs")
+    for i, design in enumerate(st.session_state.mix_designs, 1):
+        with st.expander(f"Design #{i} - {design['data']['Target Mean Strength']} MPa"):
+            st.write(design['data'])
+            if design.get('chart'):
+                st.image(design['chart'])
+    
+    # PDF Generation
+    if st.button("📄 Generate Master PDF"):
+        with st.spinner(f"Compiling {len(st.session_state.mix_designs)} designs..."):
+            pdf_bytes = create_multi_design_pdf(
+                st.session_state.mix_designs,
+                project_name
+            )
+            if pdf_bytes:
+                st.download_button(
+                    "💾 Download Full Report",
+                    pdf_bytes,
+                    f"concrete_mix_designs_{project_name}.pdf",
+                    "application/pdf"
+                )
+    
+    if st.button("🧹 Clear Designs"):
+        st.session_state.mix_designs = []
+        st.experimental_rerun()
+        
 # --- Footer ---
 st.markdown("---")
 st.caption(FOOTER_NOTE)

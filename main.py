@@ -306,7 +306,7 @@ if st.button("🧪 Compute Mix Design"):
 # --- Footer ---
 st.markdown("---")
 st.caption(FOOTER_NOTE)# --- Main UI Logic ---
-if st.button("🧪 Compute Mix Design"):
+if st.button("🧪 Compute Mix Design",  key="compute_mix_button"):
     try:
         result = calculate_mix()
         if not isinstance(result, dict):

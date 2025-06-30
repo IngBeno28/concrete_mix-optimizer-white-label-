@@ -257,45 +257,47 @@ def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
         st.markdown("---")
         st.caption(FOOTER_NOTE)# --- Main UI Logic ---
         if st.button("🧪 Compute Mix Design",  key="compute_mix_button"):
-            try:
-                result = calculate_mix()
-                if not isinstance(result, dict):
-                    raise ValueError("Invalid mix calculation results")
-                
-                st.write("### 📊 Mix Proportions:")
-                
-        df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
-        df = df.reset_index().rename(columns={'index': 'Material'})  # Convert index to column
-        
-        # Create styled DataFrame
-        styled_df = (
-            df.style
-            .set_properties(subset=['Value'], **{'text-align': 'right'})
-            .format({'Value': '{:.1f}'})
+           try:
+    # Create DataFrame from results
+    df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
+    df = df.reset_index().rename(columns={'index': 'Material'})
+    
+    # Create styled DataFrame
+    styled_df = (
+        df.style
+        .set_properties(subset=['Value'], **{'text-align': 'right'})
+        .format({'Value': '{:.1f}'})
+    )
+    
+    # Create layout columns
+    col_table, col_chart = st.columns([2, 1])
+    
+    with col_table:
+        st.markdown("**Concrete Mix Composition**")
+        st.dataframe(
+            styled_df,
+            height=min(len(result) * 45 + 50, 400),
+            use_container_width=True
         )
-        
-        # Create two columns with your desired width ratio
-        col_table, col_chart = st.columns([2, 1])
-        
-        with col_table:
-            st.markdown("**Concrete Mix Composition**")
-            st.dataframe(
-                styled_df,
-                height=min(len(result) * 45 + 50, 400),
-                use_container_width=True
-            )
-        
-        with col_chart:
-            # Create and display pie chart
+    
+    with col_chart:
+        # Create pie chart (only for positive values)
+        pie_data = df[df['Value'] > 0]
+        if not pie_data.empty:
             fig, ax = plt.subplots()
             ax.pie(
-                df['Value'],
-                labels=df['Material'],
+                pie_data['Value'],
+                labels=pie_data['Material'],
                 autopct='%1.1f%%',
                 startangle=90
             )
-            ax.axis('equal')  # Equal aspect ratio ensures circular pie
+            ax.axis('equal')
             st.pyplot(fig)
+        else:
+            st.warning("No positive values to display in pie chart")
+
+except Exception as e:
+    st.error(f"An error occurred while displaying results: {str(e)}")
 
         # CSV Download
         csv = df.to_csv().encode('utf-8')

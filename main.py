@@ -124,10 +124,15 @@ def calculate_mix(
 
         cement = max(water / wcm, ACI_EXPOSURE[exposure]['min_cement'])
 
-        try:
+                try:
             ca_vol = ACI_CA_VOLUME[round(fm,1)][max_agg_size]
         except:
             ca_vol = ACI_CA_VOLUME[2.7][max_agg_size]
+
+        # --- Adjust CA volume based on slump for more realistic behavior ---
+        slump_correction = (slump - 75) * -0.001  # Decrease CA with higher slump
+        ca_vol = max(0.5, min(0.8, ca_vol + slump_correction))
+
 
         ca_mass = ca_vol * unit_weight_ca
 

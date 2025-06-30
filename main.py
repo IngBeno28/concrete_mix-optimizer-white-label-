@@ -157,7 +157,7 @@ def generate_pie_chart(data):
 
 
 def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
-    """Generate a comprehensive PDF report with all mix designs"""
+    """Generate a comprehensive PDF report with all mix designs including parameter tables"""
     try:
         pdf = FPDF()
         pdf.set_auto_page_break(auto=True, margin=15)
@@ -166,23 +166,10 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
         def safe_text(text):
             if not isinstance(text, str):
                 text = str(text)
-            # Replace problematic characters with ASCII equivalents
-            replacements = {
-                '•': '-',  # Bullet to hyphen
-                '–': '-',  # En dash to hyphen
-                '—': '-',  # Em dash to hyphen
-                '°': ' deg',  # Degree symbol
-                '±': '+/-',  # Plus-minus
-                'µ': 'u'    # Micro symbol
-            }
-            for k, v in replacements.items():
-                text = text.replace(k, v)
-            return text
+            return text.encode('latin-1', errors='replace').decode('latin-1')
 
-        # --- Cover Page ---
+        # --- Cover Page with Logo ---
         pdf.add_page()
-        
-        # Add logo if available
         if LOGO_PATH and os.path.exists(LOGO_PATH):
             try:
                 with Image.open(LOGO_PATH) as img:
@@ -219,7 +206,10 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
             pdf.cell(0, 8, safe_text(f"Calculated: {design['timestamp']}"), 0, 1, 'C')
             pdf.ln(10)
 
-            # Results table
+            # --- Results Table ---
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(0, 10, safe_text("Mix Design Results"), 0, 1, 'C')
+            
             col_widths = [70, 30, 30]
             pdf.set_font("Arial", 'B', 10)
             pdf.set_x((pdf.w - sum(col_widths))/2)
@@ -243,53 +233,52 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
                 }.get(param, "-")), 1, 0, 'C')
                 pdf.ln(8)
 
-            # Input parameters section
+            # --- Design Parameters Table ---
             pdf.ln(10)
             pdf.set_font("Arial", 'B', 12)
-            pdf.cell(0, 10, safe_text("Design Parameters:"), 0, 1, 'C')
+            pdf.cell(0, 10, safe_text("Design Parameters"), 0, 1, 'C')
             
-            # Use simple dashes instead of bullets
+            # Prepare parameter data
             params = design['inputs']
-            col1 = [
-                f"- f'c: {params['fck']} MPa",
-                f"- Std Dev: {params['std_dev']} MPa",
-                f"- Exposure: {params['exposure']}",
-                f"- Max Agg Size: {params['max_agg_size']} mm"
+            parameter_data = [
+                ["Material Properties", "", ""],
+                [f"Cement SG", f"{params['sg_cement']}", ""],
+                [f"Fine Aggregate SG", f"{params['sg_fa']}", ""],
+                [f"Coarse Aggregate SG", f"{params['sg_ca']}", ""],
+                [f"CA Unit Weight", f"{params['unit_weight_ca']} kg/m³", ""],
+                [f"FA Moisture", f"{params['moist_fa']}%", ""],
+                [f"CA Moisture", f"{params['moist_ca']}%", ""],
+                ["", "", ""],
+                ["Mix Parameters", "", ""],
+                [f"f'c", f"{params['fck']} MPa", ""],
+                [f"Standard Deviation", f"{params['std_dev']} MPa", ""],
+                [f"Exposure Class", f"{params['exposure']}", ""],
+                [f"Max Aggregate Size", f"{params['max_agg_size']} mm", ""],
+                [f"Slump", f"{params['slump']} mm", ""],
+                [f"Air Entrained", f"{'Yes' if params['air_entrained'] else 'No'}", ""],
+                [f"Target Air Content", f"{params['air_content']}%" if params['air_entrained'] else "N/A", ""],
+                [f"w/c Ratio", f"{params['wcm']}", ""],
+                [f"Admixture", f"{params['admixture']}%", ""],
+                [f"FA Fineness Modulus", f"{params['fm']}", ""]
             ]
-            
-            col2 = [
-                f"- Slump: {params['slump']} mm",
-                f"- Air Entrained: {'Yes' if params['air_entrained'] else 'No'}",
-                f"- Air Content: {params['air_content']}%" if params['air_entrained'] else "",
-                f"- w/c Ratio: {params['wcm']}"
-            ]
-            
-            col3 = [
-                f"- Admixture: {params['admixture']}%",
-                f"- FM: {params['fm']}",
-                f"- Cement SG: {params['sg_cement']}",
-                f"- FA SG: {params['sg_fa']}"
-            ]
-            
-            # Print columns
+
+            # Create parameter table
+            param_col_widths = [70, 50, 30]
             pdf.set_font("Arial", '', 10)
-            pdf.set_x(15)
-            for i in range(max(len(col1), len(col2), len(col3))):
-                if i < len(col1):
-                    pdf.cell(60, 8, safe_text(col1[i]))
-                else:
-                    pdf.cell(60, 8, "")
+            
+            for row in parameter_data:
+                pdf.set_x((pdf.w - sum(param_col_widths))/2)
                 
-                if i < len(col2):
-                    pdf.cell(60, 8, safe_text(col2[i]))
+                # Style headers differently
+                if row[0] in ["Material Properties", "Mix Parameters"]:
+                    pdf.set_font("Arial", 'B', 10)
+                    pdf.cell(sum(param_col_widths), 8, safe_text(row[0]), 1, 1, 'C')
+                    pdf.set_font("Arial", '', 10)
                 else:
-                    pdf.cell(60, 8, "")
-                
-                if i < len(col3):
-                    pdf.cell(60, 8, safe_text(col3[i]))
-                else:
-                    pdf.cell(60, 8, "")
-                pdf.ln(8)
+                    pdf.cell(param_col_widths[0], 8, safe_text(row[0]), 1)
+                    pdf.cell(param_col_widths[1], 8, safe_text(row[1]), 1)
+                    pdf.cell(param_col_widths[2], 8, safe_text(row[2]), 1)
+                    pdf.ln(8)
 
             # Add chart if available
             if design.get('chart'):
@@ -301,24 +290,13 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
                 except Exception as e:
                     st.error(f"Chart rendering error: {str(e)}")
 
-        # Generate PDF with proper encoding
-        pdf_output = pdf.output(dest='S')
-        try:
-            return pdf_output.encode('latin-1')
-        except UnicodeEncodeError:
-            # Fallback to UTF-8 if Latin-1 fails
-            return pdf_output.encode('utf-8')
+        # Generate final PDF
+        return pdf.output(dest='S').encode('latin-1', errors='replace')
             
     except Exception as e:
         st.error(f"PDF generation failed: {str(e)}")
         return None
-
-# --- Main Application Logic ---
-if 'mix_designs' not in st.session_state:
-    st.session_state.mix_designs = []
-if 'show_new_design' not in st.session_state:
-    st.session_state.show_new_design = False
-
+        
 # Compute or Start New Design button
 if not st.session_state.show_new_design:
     if st.button("🧪 Compute Mix Design", key="compute_mix_button"):

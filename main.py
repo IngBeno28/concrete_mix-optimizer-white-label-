@@ -265,7 +265,7 @@ if st.button("🧪 Compute Mix Design",  key="compute_mix_button"):
         st.write("### 📊 Mix Proportions:")
         
         # Create DataFrame for display
-        #df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
+        '''df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
         styled_df = (
             df.style
             .set_properties(**{'text-align': 'left'})  # Left-align index (material names)
@@ -275,7 +275,7 @@ if st.button("🧪 Compute Mix Design",  key="compute_mix_button"):
                 'props': [('text-align', 'right')]
             }])
             .format({'Value': '{:.1f}'})  # Format to 1 decimal place
-        )
+        )'''
         
         # Display in Streamlit
         st.dataframe(styled_df)

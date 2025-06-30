@@ -154,146 +154,172 @@ def generate_pie_chart(data):
         st.error(f"Chart error: {str(e)}")
         return None
 
-# Add to imports
-from typing import List, Dict, Optional
 
-# PDF Generation Function
 def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
-    """Generate a comprehensive PDF report with all mix designs"""
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    
-    # Cover Page
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 24)
-    pdf.cell(0, 40, "Concrete Mix Design Report", 0, 1, 'C')
-    pdf.set_font("Arial", '', 16)
-    pdf.cell(0, 10, f"Project: {project_name}", 0, 1, 'C')
-    pdf.cell(0, 10, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 1, 'C')
-    pdf.ln(20)
-    pdf.cell(0, 10, f"Total Designs: {len(designs)}", 0, 1, 'C')
-    
-    # Table of Contents
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, "Table of Contents", 0, 1)
-    pdf.set_font("Arial", '', 12)
-    
-    for i, design in enumerate(designs, 1):
-        pdf.cell(0, 10, 
-                f"{i}. Design {i} - {design['data']['Target Mean Strength']} MPa (Page {i+2})", 
-                0, 1)
-    
-    # Design Pages
-    for i, design in enumerate(designs, 1):
+    """Generate a comprehensive PDF report with all mix designs including logo"""
+    try:
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+
+        # --- Cover Page with Logo ---
         pdf.add_page()
         
-        # Header
-        pdf.set_font("Arial", 'B', 16)
-        pdf.cell(0, 10, f"Design #{i}", 0, 1)
-        pdf.set_font("Arial", '', 12)
-        pdf.cell(0, 10, f"Target Strength: {design['data']['Target Mean Strength']} MPa", 0, 1)
-        pdf.cell(0, 10, f"Calculated: {design['timestamp']}", 0, 1)
-        pdf.ln(10)
-        
-        # Parameters Table
-        col_widths = [70, 30, 30]
-        pdf.set_font("Arial", 'B', 10)
-        pdf.cell(col_widths[0], 8, "Parameter", 1)
-        pdf.cell(col_widths[1], 8, "Value", 1)
-        pdf.cell(col_widths[2], 8, "Unit", 1)
-        pdf.ln(8)
-        
-        pdf.set_font("Arial", '', 10)
-        units = {
-            "Target Mean Strength": "MPa",
-            "Water": "kg/m³",
-            "Cement": "kg/m³", 
-            "Fine Aggregate": "kg/m³",
-            "Coarse Aggregate": "kg/m³",
-            "Air Content": "%",
-            "Admixture": "kg/m³"
-        }
-        
-        for param, value in design['data'].items():
-            pdf.cell(col_widths[0], 8, param, 1)
-            pdf.cell(col_widths[1], 8, f"{value:.2f}", 1)
-            pdf.cell(col_widths[2], 8, units.get(param, "-"), 1)
-            pdf.ln(8)
-        
-        # Input Parameters Section
-        pdf.ln(10)
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(0, 10, "Design Parameters Used:", 0, 1)
-        pdf.set_font("Arial", '', 10)
-        
-        # Group parameters into columns
-        params = design['inputs']
-        col1 = [
-            f"f'c: {params['fck']} MPa",
-            f"Std Dev: {params['std_dev']} MPa",
-            f"Exposure: {params['exposure']}",
-            f"Max Agg: {params['max_agg_size']} mm"
-        ]
-        
-        col2 = [
-            f"Slump: {params['slump']} mm",
-            f"Air Entrained: {'Yes' if params['air_entrained'] else 'No'}",
-            f"Air Content: {params['air_content']}%" if params['air_entrained'] else "",
-            f"w/c Ratio: {params['wcm']}"
-        ]
-        
-        col3 = [
-            f"Admixture: {params['admixture']}%",
-            f"FM: {params['fm']}",
-            f"Cement SG: {params['sg_cement']}",
-            f"FA SG: {params['sg_fa']}"
-        ]
-        
-        # Display parameter columns
-        pdf.set_x(20)
-        for line in range(max(len(col1), len(col2), len(col3))):
-            if line < len(col1):
-                pdf.cell(60, 8, col1[line])
-            else:
-                pdf.cell(60, 8, "")
-                
-            if line < len(col2):
-                pdf.cell(60, 8, col2[line])
-            else:
-                pdf.cell(60, 8, "")
-                
-            if line < len(col3):
-                pdf.cell(60, 8, col3[line])
-            else:
-                pdf.cell(60, 8, "")
-            pdf.ln(8)
-        
-        # Pie Chart
-        if design.get('chart'):
+        # Add logo if available
+        if LOGO_PATH and os.path.exists(LOGO_PATH):
             try:
-                with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
-                    Image.open(design['chart']).convert('RGB').save(tmp.name)
-                    pdf.image(tmp.name, x=50, y=pdf.get_y()+10, w=100)
-                    os.unlink(tmp.name)
+                with Image.open(LOGO_PATH) as img:
+                    if img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    temp_logo_path = os.path.join(tempfile.gettempdir(), f"temp_logo_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg")
+                    img.save(temp_logo_path, format='JPEG', quality=95)
+                    pdf.image(temp_logo_path, x=(pdf.w - 40)/2, y=30, w=40)
+                    os.unlink(temp_logo_path)
+                pdf.ln(50)  # Space after logo
             except Exception as e:
-                st.error(f"Chart error: {str(e)}")
-        
-        # Page footer
-        pdf.set_y(-15)
-        pdf.set_font("Arial", 'I', 8)
-        pdf.cell(0, 10, f"Page {pdf.page_no()} - Design {i} of {len(designs)}", 0, 0, 'C')
-    
-    # Final footer
-    pdf.set_y(-15)
-    pdf.set_font("Arial", 'I', 8)
-    pdf.cell(0, 10, f"Generated by {CLIENT_NAME}", 0, 0, 'C')
-    
-    return pdf.output(dest='S').encode('latin1')
+                st.error(f"Logo processing error: {str(e)}")
 
-# --- Modified Main Logic ---
-if 'mix_designs' not in st.session_state:
-    st.session_state.mix_designs = []
+        # Cover page content
+        pdf.set_font("Arial", 'B', 24)
+        pdf.cell(0, 15, "Concrete Mix Design Report", 0, 1, 'C')
+        pdf.set_font("Arial", '', 16)
+        pdf.cell(0, 10, f"Project: {project_name}", 0, 1, 'C')
+        pdf.cell(0, 10, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 1, 'C')
+        pdf.ln(20)
+        pdf.set_font("Arial", 'B', 18)
+        pdf.cell(0, 10, f"Total Designs: {len(designs)}", 0, 1, 'C')
+        pdf.ln(15)
+        pdf.set_font("Arial", 'I', 12)
+        pdf.cell(0, 10, f"Generated by {CLIENT_NAME}", 0, 1, 'C')
+
+        # --- Table of Contents ---
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(0, 15, "Table of Contents", 0, 1)
+        pdf.set_font("Arial", '', 12)
+        pdf.ln(10)
+        
+        for i, design in enumerate(designs, 1):
+            pdf.cell(0, 8, f"{i}. Design {i} - {design['data']['Target Mean Strength']} MPa (Page {i+2})", 0, 1)
+            pdf.cell(0, 2, "", 0, 1)  # Small space between items
+
+        # --- Design Pages ---
+        for i, design in enumerate(designs, 1):
+            pdf.add_page()
+            
+            # Page header with logo (smaller)
+            if LOGO_PATH and os.path.exists(LOGO_PATH):
+                try:
+                    with Image.open(LOGO_PATH) as img:
+                        if img.mode != 'RGB':
+                            img = img.convert('RGB')
+                        temp_logo_path = os.path.join(tempfile.gettempdir(), f"temp_logo_small_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg")
+                        img.save(temp_logo_path, format='JPEG', quality=90)
+                        pdf.image(temp_logo_path, x=10, y=8, w=20)
+                        os.unlink(temp_logo_path)
+                except Exception as e:
+                    pass  # Skip logo if there's an error
+
+            # Design header
+            pdf.set_font("Arial", 'B', 16)
+            pdf.cell(0, 15, f"Design #{i}", 0, 1, 'C')
+            pdf.set_font("Arial", '', 12)
+            pdf.cell(0, 8, f"Target Strength: {design['data']['Target Mean Strength']} MPa", 0, 1, 'C')
+            pdf.cell(0, 8, f"Calculated: {design['timestamp']}", 0, 1, 'C')
+            pdf.ln(10)
+
+            # Results table
+            col_widths = [70, 30, 30]
+            pdf.set_font("Arial", 'B', 10)
+            pdf.set_x((pdf.w - sum(col_widths))/2)  # Center table
+            pdf.cell(col_widths[0], 8, "Parameter", 1, 0, 'C')
+            pdf.cell(col_widths[1], 8, "Value", 1, 0, 'C')
+            pdf.cell(col_widths[2], 8, "Unit", 1, 1, 'C')
+            
+            pdf.set_font("Arial", '', 10)
+            units = {
+                "Target Mean Strength": "MPa",
+                "Water": "kg/m³",
+                "Cement": "kg/m³",
+                "Fine Aggregate": "kg/m³",
+                "Coarse Aggregate": "kg/m³",
+                "Air Content": "%",
+                "Admixture": "kg/m³"
+            }
+            
+            for param, value in design['data'].items():
+                pdf.set_x((pdf.w - sum(col_widths))/2)
+                pdf.cell(col_widths[0], 8, param, 1)
+                pdf.cell(col_widths[1], 8, f"{value:.2f}", 1, 0, 'C')
+                pdf.cell(col_widths[2], 8, units.get(param, "-"), 1, 0, 'C')
+                pdf.ln(8)
+
+            # Input parameters section
+            pdf.ln(10)
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(0, 10, "Design Parameters:", 0, 1, 'C')
+            
+            # Organize parameters into 3 columns
+            params = design['inputs']
+            col1 = [
+                f"• f'c: {params['fck']} MPa",
+                f"• Std Dev: {params['std_dev']} MPa",
+                f"• Exposure: {params['exposure']}",
+                f"• Max Agg Size: {params['max_agg_size']} mm"
+            ]
+            
+            col2 = [
+                f"• Slump: {params['slump']} mm",
+                f"• Air Entrained: {'Yes' if params['air_entrained'] else 'No'}",
+                f"• Air Content: {params['air_content']}%" if params['air_entrained'] else "",
+                f"• w/c Ratio: {params['wcm']}"
+            ]
+            
+            col3 = [
+                f"• Admixture: {params['admixture']}%",
+                f"• FM: {params['fm']}",
+                f"• Cement SG: {params['sg_cement']}",
+                f"• FA SG: {params['sg_fa']}"
+            ]
+            
+            # Print columns side by side
+            pdf.set_font("Arial", '', 10)
+            pdf.set_x(15)
+            for i in range(max(len(col1), len(col2), len(col3))):
+                if i < len(col1):
+                    pdf.cell(60, 8, col1[i])
+                else:
+                    pdf.cell(60, 8, "")
+                
+                if i < len(col2):
+                    pdf.cell(60, 8, col2[i])
+                else:
+                    pdf.cell(60, 8, "")
+                
+                if i < len(col3):
+                    pdf.cell(60, 8, col3[i])
+                else:
+                    pdf.cell(60, 8, "")
+                pdf.ln(8)
+
+            # Add chart if available
+            if design.get('chart'):
+                try:
+                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                        Image.open(design['chart']).convert('RGB').save(tmp.name, quality=95)
+                        pdf.image(tmp.name, x=(pdf.w - 100)/2, y=pdf.get_y()+5, w=100)
+                        os.unlink(tmp.name)
+                except Exception as e:
+                    st.error(f"Chart rendering error: {str(e)}")
+
+            # Page footer
+            pdf.set_y(-15)
+            pdf.set_font("Arial", 'I', 8)
+            pdf.cell(0, 10, f"Page {pdf.page_no()} | {CLIENT_NAME}", 0, 0, 'C')
+
+        return pdf.output(dest='S').encode('latin1')
+    except Exception as e:
+        st.error(f"PDF generation failed: {str(e)}")
+        return None
 
 # --- Main Application Logic ---
 if 'mix_designs' not in st.session_state:

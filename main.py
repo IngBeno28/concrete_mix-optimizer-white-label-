@@ -284,12 +284,8 @@ if st.button("🧪 Compute Mix Design",  key="compute_mix_button"):
         col_table, col_chart = st.columns([2, 1])
 
         with col_table:
-            st.dataframe(
-                df.style.format("{:.1f}").set_properties(**{'text-align': 'right'}),
-                height=min(len(result) * 45 + 50, 400),
-                use_container_width=True
-            )
-
+           pass
+            
         with col_chart:
             pie_chart_buf = generate_pie_chart_image(result)
             if pie_chart_buf:

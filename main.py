@@ -14,6 +14,12 @@ from branding import CLIENT_NAME, APP_TITLE, PRIMARY_COLOR, LOGO_PATH, FOOTER_NO
 # --- Streamlit Config ---
 st.set_page_config(APP_TITLE, layout="wide")
 
+# Initialize session state
+if 'mix_designs' not in st.session_state:
+    st.session_state.mix_designs = []
+if 'show_new_design' not in st.session_state:
+    st.session_state.show_new_design = False
+
 # Load CSS
 with open("style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
@@ -153,8 +159,6 @@ def generate_pie_chart(data):
     except Exception as e:
         st.error(f"Chart error: {str(e)}")
         return None
-
-
 
 def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
     """Generate a comprehensive PDF report with all mix designs including parameter tables"""
@@ -328,7 +332,7 @@ if not st.session_state.show_new_design:
             })
             st.success("Mix design calculated and saved!")
             st.session_state.show_new_design = True
-            st.rerun()  # Fixed: Replaced experimental_rerun()
+            st.rerun()
 else:
     # Display current parameters with option to modify
     with st.expander("⚙️ Current Parameters (Click to Modify)", expanded=True):
@@ -423,12 +427,12 @@ else:
                     }
                 })
                 st.success("New mix design calculated!")
-                st.rerun()  # Fixed: Replaced experimental_rerun()
+                st.rerun()
     
     with col2:
         if st.button("🆕 Start Fresh Design", key="fresh_design"):
             st.session_state.show_new_design = False
-            st.rerun()  # Fixed: Replaced experimental_rerun()
+            st.rerun()
 
 # Display accumulated designs
 if st.session_state.mix_designs:
@@ -476,7 +480,7 @@ if st.session_state.mix_designs:
             st.session_state.mix_designs = []
             st.session_state.show_new_design = False
             st.success("All designs cleared!")
-            st.rerun()  # Fixed: Replaced experimental_rerun()
+            st.rerun()
         
 # --- Footer ---
 st.markdown("---")

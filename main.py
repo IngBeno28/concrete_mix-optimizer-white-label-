@@ -329,7 +329,7 @@ if 'show_new_design' not in st.session_state:
 
 # Compute or Start New Design button
 if not st.session_state.show_new_design:
-    if st.button("🧪 Compute Mix Design"):
+    if st.button("🧪 Compute Mix Design", key="compute_mix_button"):
         result = calculate_mix()
         if result:
             chart_buf = generate_pie_chart(result)
@@ -357,42 +357,75 @@ if not st.session_state.show_new_design:
                 }
             })
             st.success("Mix design calculated and saved!")
-            st.session_state.show_new_design = True  # Show option to start new design
-            st.rerun()
+            st.session_state.show_new_design = True
+            st.rerun()  # Fixed: Replaced experimental_rerun()
 else:
     # Display current parameters with option to modify
     with st.expander("⚙️ Current Parameters (Click to Modify)", expanded=True):
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            fck = st.number_input("f'c (MPa)", 10.0, 80.0, st.session_state.mix_designs[-1]['inputs']['fck'])
-            std_dev = st.number_input("Standard deviation (MPa)", 3.0, 10.0, st.session_state.mix_designs[-1]['inputs']['std_dev'])
-            exposure = st.selectbox("Exposure Class", list(ACI_EXPOSURE), index=list(ACI_EXPOSURE).index(st.session_state.mix_designs[-1]['inputs']['exposure']))
+            fck = st.number_input("f'c (MPa)", 10.0, 80.0, 
+                                st.session_state.mix_designs[-1]['inputs']['fck'],
+                                key="mod_fck")
+            std_dev = st.number_input("Standard deviation (MPa)", 3.0, 10.0, 
+                                    st.session_state.mix_designs[-1]['inputs']['std_dev'],
+                                    key="mod_std_dev")
+            exposure = st.selectbox("Exposure Class", list(ACI_EXPOSURE), 
+                                  index=list(ACI_EXPOSURE).index(st.session_state.mix_designs[-1]['inputs']['exposure']),
+                                  key="mod_exposure")
 
         with col2:
-            max_agg_size = st.selectbox("Max Aggregate Size (mm)", [10, 20, 40], index=[10, 20, 40].index(st.session_state.mix_designs[-1]['inputs']['max_agg_size']))
-            slump = st.slider("Slump (mm)", 25, 200, st.session_state.mix_designs[-1]['inputs']['slump'])
-            air_entrained = st.checkbox("Air Entrained", st.session_state.mix_designs[-1]['inputs']['air_entrained'])
-            air_content = st.slider("Target Air Content (%)", 1.0, 8.0, st.session_state.mix_designs[-1]['inputs']['air_content']) if air_entrained else 0.0
+            max_agg_size = st.selectbox("Max Aggregate Size (mm)", [10, 20, 40], 
+                                      index=[10, 20, 40].index(st.session_state.mix_designs[-1]['inputs']['max_agg_size']),
+                                      key="mod_max_agg_size")
+            slump = st.slider("Slump (mm)", 25, 200, 
+                            st.session_state.mix_designs[-1]['inputs']['slump'],
+                            key="mod_slump")
+            air_entrained = st.checkbox("Air Entrained", 
+                                      st.session_state.mix_designs[-1]['inputs']['air_entrained'],
+                                      key="mod_air_entrained")
+            air_content = st.slider("Target Air Content (%)", 1.0, 8.0, 
+                                  st.session_state.mix_designs[-1]['inputs']['air_content'],
+                                  key="mod_air_content") if air_entrained else 0.0
 
         with col3:
-            wcm = st.number_input("w/c Ratio", 0.3, 0.7, st.session_state.mix_designs[-1]['inputs']['wcm'])
-            admixture = st.number_input("Admixture (%)", 0.0, 5.0, st.session_state.mix_designs[-1]['inputs']['admixture'])
-            fm = st.slider("FA Fineness Modulus", 2.4, 3.0, st.session_state.mix_designs[-1]['inputs']['fm'], step=0.1)
+            wcm = st.number_input("w/c Ratio", 0.3, 0.7, 
+                                st.session_state.mix_designs[-1]['inputs']['wcm'],
+                                key="mod_wcm")
+            admixture = st.number_input("Admixture (%)", 0.0, 5.0, 
+                                      st.session_state.mix_designs[-1]['inputs']['admixture'],
+                                      key="mod_admixture")
+            fm = st.slider("FA Fineness Modulus", 2.4, 3.0, 
+                          st.session_state.mix_designs[-1]['inputs']['fm'], 
+                          step=0.1,
+                          key="mod_fm")
 
     # Material Properties (collapsed by default)
     with st.expander("🔬 Material Properties (Click to Modify)"):
-        sg_cement = st.number_input("Cement SG", 2.0, 3.5, st.session_state.mix_designs[-1]['inputs']['sg_cement'])
-        sg_fa = st.number_input("Fine Aggregate SG", 2.4, 2.8, st.session_state.mix_designs[-1]['inputs']['sg_fa'])
-        sg_ca = st.number_input("Coarse Aggregate SG", 2.4, 2.8, st.session_state.mix_designs[-1]['inputs']['sg_ca'])
-        unit_weight_ca = st.number_input("CA Unit Weight (kg/m³)", 1400, 1800, st.session_state.mix_designs[-1]['inputs']['unit_weight_ca'])
-        moist_fa = st.number_input("FA Moisture (%)", 0.0, 10.0, st.session_state.mix_designs[-1]['inputs']['moist_fa'])
-        moist_ca = st.number_input("CA Moisture (%)", 0.0, 10.0, st.session_state.mix_designs[-1]['inputs']['moist_ca'])
+        sg_cement = st.number_input("Cement SG", 2.0, 3.5, 
+                                  st.session_state.mix_designs[-1]['inputs']['sg_cement'],
+                                  key="mod_sg_cement")
+        sg_fa = st.number_input("Fine Aggregate SG", 2.4, 2.8, 
+                              st.session_state.mix_designs[-1]['inputs']['sg_fa'],
+                              key="mod_sg_fa")
+        sg_ca = st.number_input("Coarse Aggregate SG", 2.4, 2.8, 
+                              st.session_state.mix_designs[-1]['inputs']['sg_ca'],
+                              key="mod_sg_ca")
+        unit_weight_ca = st.number_input("CA Unit Weight (kg/m³)", 1400, 1800, 
+                                       st.session_state.mix_designs[-1]['inputs']['unit_weight_ca'],
+                                       key="mod_unit_weight_ca")
+        moist_fa = st.number_input("FA Moisture (%)", 0.0, 10.0, 
+                                 st.session_state.mix_designs[-1]['inputs']['moist_fa'],
+                                 key="mod_moist_fa")
+        moist_ca = st.number_input("CA Moisture (%)", 0.0, 10.0, 
+                                 st.session_state.mix_designs[-1]['inputs']['moist_ca'],
+                                 key="mod_moist_ca")
 
     # Action buttons
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("🔄 Compute With Modified Parameters"):
+        if st.button("🔄 Compute With Modified Parameters", key="compute_modified"):
             result = calculate_mix()
             if result:
                 chart_buf = generate_pie_chart(result)
@@ -420,12 +453,12 @@ else:
                     }
                 })
                 st.success("New mix design calculated!")
-                st.rerun()
+                st.rerun()  # Fixed: Replaced experimental_rerun()
     
     with col2:
-        if st.button("🆕 Start Fresh Design"):
+        if st.button("🆕 Start Fresh Design", key="fresh_design"):
             st.session_state.show_new_design = False
-            st.rerun()
+            st.rerun()  # Fixed: Replaced experimental_rerun()
 
 # Display accumulated designs
 if st.session_state.mix_designs:
@@ -453,7 +486,7 @@ if st.session_state.mix_designs:
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("📄 Generate Master PDF"):
+        if st.button("📄 Generate Master PDF", key="generate_pdf"):
             with st.spinner(f"Compiling {len(st.session_state.mix_designs)} designs..."):
                 pdf_bytes = create_pdf_report_multiple(
                     st.session_state.mix_designs,
@@ -464,15 +497,16 @@ if st.session_state.mix_designs:
                         "💾 Download Full Report",
                         pdf_bytes,
                         f"concrete_mix_designs_{project_name}.pdf",
-                        "application/pdf"
+                        "application/pdf",
+                        key="download_pdf"
                     )
     
     with col2:
-        if st.button("🧹 Clear All Designs"):
+        if st.button("🧹 Clear All Designs", key="clear_designs"):
             st.session_state.mix_designs = []
             st.session_state.show_new_design = False
             st.success("All designs cleared!")
-            st.rerun()
+            st.rerun()  # Fixed: Replaced experimental_rerun()
         
 # --- Footer ---
 st.markdown("---")

@@ -106,8 +106,11 @@ with st.expander("🔬 Material Properties"):
     moist_ca = st.number_input("CA Moisture (%)", 0.0, 10.0, current_params['moist_ca'])
 
 # --- Mix Design Logic ---
-@st.cache_data
-def calculate_mix():
+def calculate_mix(
+    fck, std_dev, exposure, max_agg_size, slump, air_entrained,
+    air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
+    unit_weight_ca, moist_fa, moist_ca
+):
     """Calculate concrete mix design based on ACI method"""
     try:
         ft = fck + 1.34 * std_dev
@@ -331,7 +334,11 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
 # Compute or Start New Design button
 if not st.session_state.show_new_design:
     if st.button("🧪 Compute Mix Design", key="compute_mix_button"):
-        result = calculate_mix()
+        result = calculate_mix(
+    fck, std_dev, exposure, max_agg_size, slump, air_entrained,
+    air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
+    unit_weight_ca, moist_fa, moist_ca
+)
         if result:
             chart_buf = generate_pie_chart(result)
             st.session_state.mix_designs.append({
@@ -427,7 +434,11 @@ else:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🔄 Compute With Modified Parameters", key="compute_modified"):
-            result = calculate_mix()
+            result = calculate_mix(
+    fck, std_dev, exposure, max_agg_size, slump, air_entrained,
+    air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
+    unit_weight_ca, moist_fa, moist_ca
+)
             if result:
                 chart_buf = generate_pie_chart(result)
                 st.session_state.mix_designs.append({

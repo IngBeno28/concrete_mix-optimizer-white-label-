@@ -13,12 +13,13 @@ from branding import CLIENT_NAME, APP_TITLE, PRIMARY_COLOR, LOGO_PATH, FOOTER_NO
 # --- Streamlit Config ---
 st.set_page_config(APP_TITLE, layout="wide")
 
+# Load CSS
 with open("style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# Optional: Display client logo
-if LOGO_PATH:
-    st.image("assets/Zhongmei Logo.jpg", width=100)
+# Display client logo if available
+if LOGO_PATH and os.path.exists(LOGO_PATH):
+    st.image(LOGO_PATH, width=100)
 
 # --- ACI Reference Tables ---
 ACI_WATER_CONTENT = {
@@ -71,98 +72,95 @@ with st.expander("🔬 Material Properties"):
     moist_ca = st.number_input("CA Moisture (%)", 0.0, 10.0, 1.0)
 
 # --- Mix Design Logic ---
+@st.cache_data
 def calculate_mix():
-    ft = fck + 1.34 * std_dev
-    if wcm > ACI_EXPOSURE[exposure]['max_wcm']:
-        st.warning("w/c exceeds max for exposure class")
-
-    water = ACI_WATER_CONTENT["Air-Entrained" if air_entrained else "Non-Air-Entrained"][max_agg_size]
-    water += (slump - 75) * 0.3
-    if admixture:
-        water *= 1 - min(0.15, admixture * 0.05)
-
-    cement = max(water / wcm, ACI_EXPOSURE[exposure]['min_cement'])
-
+    """Calculate concrete mix design based on ACI method"""
     try:
-        ca_vol = ACI_CA_VOLUME[round(fm,1)][max_agg_size]
-    except:
-        ca_vol = ACI_CA_VOLUME[2.7][max_agg_size]
+        ft = fck + 1.34 * std_dev
+        if wcm > ACI_EXPOSURE[exposure]['max_wcm']:
+            st.warning("w/c exceeds max for exposure class")
 
-    ca_mass = ca_vol * unit_weight_ca
+        water = ACI_WATER_CONTENT["Air-Entrained" if air_entrained else "Non-Air-Entrained"][max_agg_size]
+        water += (slump - 75) * 0.3
+        if admixture:
+            water *= 1 - min(0.15, admixture * 0.05)
 
-    cement_vol = cement / (sg_cement * 1000)
-    water_vol = water / 1000
-    air_vol = air_content / 100 if air_entrained else 0.01
-    ca_vol_abs = ca_mass / (sg_ca * 1000)
-    fa_vol = 1 - (cement_vol + water_vol + air_vol + ca_vol_abs)
-    fa_mass = fa_vol * sg_fa * 1000
+        cement = max(water / wcm, ACI_EXPOSURE[exposure]['min_cement'])
 
-    fa_mass_adj = fa_mass * (1 + moist_fa / 100)
-    ca_mass_adj = ca_mass * (1 + moist_ca / 100)
-    water -= (fa_mass * moist_fa / 100 + ca_mass * moist_ca / 100)
+        try:
+            ca_vol = ACI_CA_VOLUME[round(fm,1)][max_agg_size]
+        except:
+            ca_vol = ACI_CA_VOLUME[2.7][max_agg_size]
 
-    return {
-        "Target Mean Strength": round(ft,2),
-        "Water": round(water,1),
-        "Cement": round(cement,1),
-        "Fine Aggregate": round(fa_mass_adj,1),
-        "Coarse Aggregate": round(ca_mass_adj,1),
-        "Air Content": round(air_content,1),
-        "Admixture": round(cement * admixture / 100,2)
-    }
+        ca_mass = ca_vol * unit_weight_ca
 
-def generate_pie_chart_image(data):
-    """Generate a pie chart image from composition data."""
+        cement_vol = cement / (sg_cement * 1000)
+        water_vol = water / 1000
+        air_vol = air_content / 100 if air_entrained else 0.01
+        ca_vol_abs = ca_mass / (sg_ca * 1000)
+        fa_vol = 1 - (cement_vol + water_vol + air_vol + ca_vol_abs)
+        fa_mass = fa_vol * sg_fa * 1000
+
+        fa_mass_adj = fa_mass * (1 + moist_fa / 100)
+        ca_mass_adj = ca_mass * (1 + moist_ca / 100)
+        water -= (fa_mass * moist_fa / 100 + ca_mass * moist_ca / 100)
+
+        return {
+            "Target Mean Strength": round(ft,2),
+            "Water": round(water,1),
+            "Cement": round(cement,1),
+            "Fine Aggregate": round(fa_mass_adj,1),
+            "Coarse Aggregate": round(ca_mass_adj,1),
+            "Air Content": round(air_content,1),
+            "Admixture": round(cement * admixture / 100,2)
+        }
+    except Exception as e:
+        st.error(f"Calculation error: {str(e)}")
+        return None
+
+def generate_pie_chart(data):
+    """Generate pie chart of material composition"""
     try:
-        # Filter only material components for the pie chart
         material_components = {
             k: v for k, v in data.items() 
-            if k in ["Water", "Cement", "Fine Aggregate", "Coarse Aggregate"]
+            if k in ["Water", "Cement", "Fine Aggregate", "Coarse Aggregate"] and v > 0
         }
         
         if not material_components:
             return None
             
-        fig, ax = plt.subplots(figsize=(8, 8))
+        fig, ax = plt.subplots(figsize=(6, 6))
         wedges, texts, autotexts = ax.pie(
             material_components.values(),
             labels=material_components.keys(),
             autopct='%1.1f%%',
             startangle=90,
-            textprops={'fontsize': 12}
+            textprops={'fontsize': 10}
         )
         ax.axis('equal')
-        ax.set_title('Concrete Mix Composition', fontsize=14, pad=20)
+        ax.set_title('Mix Composition', fontsize=12, pad=10)
         
-        plt.setp(autotexts, size=12, weight="bold")
-        plt.setp(texts, size=12)
+        plt.setp(autotexts, size=10, weight="bold")
+        plt.setp(texts, size=10)
         
         buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+        plt.savefig(buf, format='png', dpi=120, bbox_inches='tight')
         buf.seek(0)
         plt.close(fig)
         return buf
         
     except Exception as e:
-        st.error(f"Error generating pie chart: {str(e)}")
+        st.error(f"Chart error: {str(e)}")
         return None
 
-def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
-    """Create a professional PDF report with centered table and clean formatting"""
+def create_pdf_report(data, chart_buf=None, project_name="Project"):
+    """Generate PDF report with mix design results"""
     try:
         pdf = FPDF()
         pdf.add_page()
         pdf.set_auto_page_break(auto=True, margin=15)
         
-        # Set document properties
-        pdf.set_title(f"Concrete Mix Design Report - {project_name}")
-        pdf.set_author("Zhongmei Engineering Group")
-        
-        # --- Header Section ---
-        if LOGO_PATH and os.path.exists(LOGO_PATH):
-            pdf.image("assets/client_logo.png", x=10, y=8, w=30)
-            
-        # Report title and project info
+        # Header
         pdf.set_font("Arial", 'B', 16)
         pdf.cell(0, 10, "Concrete Mix Design Report", ln=True, align='C')
         pdf.set_font("Arial", '', 12)
@@ -170,25 +168,25 @@ def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
         pdf.cell(0, 10, f"Date: {datetime.now().strftime('%Y-%m-%d')}", ln=True, align='C')
         pdf.ln(15)
 
-        # --- Mix Design Table (Centered) ---
+        # Mix Design Table
         pdf.set_font("Arial", 'B', 12)
         pdf.cell(0, 10, "Mix Design Parameters", ln=True, align='C')
         pdf.ln(5)
         
         # Table settings
-        col_widths = [70, 30, 30]  # Parameter, Value, Unit columns
+        col_widths = [70, 30, 30]
         row_height = 8
         
-        # Header row (centered)
+        # Table header
         pdf.set_font("Arial", 'B', 10)
         pdf.cell(col_widths[0], row_height, "Parameter", border=1, align='C')
         pdf.cell(col_widths[1], row_height, "Value", border=1, align='C')
         pdf.cell(col_widths[2], row_height, "Unit", border=1, align='C')
         pdf.ln(row_height)
         
-        # Table content (centered)
+        # Table content
         pdf.set_font("Arial", '', 10)
-        units_mapping = {
+        units = {
             "Target Mean Strength": "MPa",
             "Water": "kg/m³",
             "Cement": "kg/m³",
@@ -199,128 +197,93 @@ def create_pdf_report(data, pie_chart_buf=None, project_name="Unnamed Project"):
         }
         
         for param, value in data.items():
-            unit = units_mapping.get(param, "")
-            pdf.cell(col_widths[0], row_height, param, border=1, align='C')
-            pdf.cell(col_widths[1], row_height, f"{value:.2f}", border=1, align='C')
-            pdf.cell(col_widths[2], row_height, unit, border=1, align='C')
+            pdf.cell(col_widths[0], row_height, param, border=1)
+            pdf.cell(col_widths[1], row_height, f"{value:.2f}", border=1, align='R')
+            pdf.cell(col_widths[2], row_height, units.get(param, ""), border=1)
             pdf.ln(row_height)
         
         pdf.ln(10)
 
-        # --- Pie Chart Section ---
-        if pie_chart_buf:
-            try:
-                with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmpfile:
-                    tmpfile.write(pie_chart_buf.getvalue())
-                    tmp_path = tmpfile.name
-                
-                pdf.set_font("Arial", 'B', 12)
-                pdf.cell(0, 10, "Mix Composition by Weight", ln=True, align='C')
-                pdf.image(tmp_path, x=50, w=110)
-                
-                # Simplified composition list (removed redundant key section)
-                pdf.ln(5)
-                pdf.set_font("Arial", '', 10)
-                pdf.cell(0, 10, "- Water: {:.1f}%".format(data["Water"]/sum([
-                    data["Water"], data["Cement"], 
-                    data["Fine Aggregate"], data["Coarse Aggregate"]
-                ])*100), ln=True, align='L')
-                pdf.cell(0, 10, "- Cement: {:.1f}%".format(data["Cement"]/sum([
-                    data["Water"], data["Cement"], 
-                    data["Fine Aggregate"], data["Coarse Aggregate"]
-                ])*100), ln=True, align='L')
-                pdf.cell(0, 10, "- Fine Aggregate: {:.1f}%".format(data["Fine Aggregate"]/sum([
-                    data["Water"], data["Cement"], 
-                    data["Fine Aggregate"], data["Coarse Aggregate"]
-                ])*100), ln=True, align='L')
-                pdf.cell(0, 10, "- Coarse Aggregate: {:.1f}%".format(data["Coarse Aggregate"]/sum([
-                    data["Water"], data["Cement"], 
-                    data["Fine Aggregate"], data["Coarse Aggregate"]
-                ])*100), ln=True, align='L')
-                
-                os.unlink(tmp_path)
-            except Exception as e:
-                st.error(f"Error adding pie chart: {str(e)}")
-
-        # --- Footer ---
+        # Pie Chart
+        if chart_buf:
+            with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                tmp.write(chart_buf.getvalue())
+                tmp_path = tmp.name
+            
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(0, 10, "Mix Composition", ln=True, align='C')
+            pdf.image(tmp_path, x=50, w=110)
+            os.unlink(tmp_path)
+        
+        # Footer
         pdf.set_y(-15)
         pdf.set_font("Arial", 'I', 8)
-        pdf.cell(0, 10, f"Generated by {CLIENT_NAME} | {datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 0, 'C')
+        pdf.cell(0, 10, f"Generated by {CLIENT_NAME}", 0, 0, 'C')
         
         return pdf.output(dest='S').encode('latin1')
         
     except Exception as e:
-        st.error(f"PDF generation failed: {str(e)}")
+        st.error(f"PDF error: {str(e)}")
         return None
 
-        # --- Footer ---
-        st.markdown("---")
-        st.caption(FOOTER_NOTE)# --- Main UI Logic ---
-        if st.button("🧪 Compute Mix Design",  key="compute_mix_button"):
-           try:
-    # Create DataFrame from results
-        df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
-        df = df.reset_index().rename(columns={'index': 'Material'})
+# --- Main Application Logic ---
+if st.button("🧪 Compute Mix Design", key="compute_mix_button"):
+    with st.spinner("Calculating optimal mix..."):
+        result = calculate_mix()
         
-        # Create styled DataFrame
-        styled_df = (
-            df.style
-            .set_properties(subset=['Value'], **{'text-align': 'right'})
-            .format({'Value': '{:.1f}'})
-        )
-        
-        # Create layout columns
-        col_table, col_chart = st.columns([2, 1])
-        
-        with col_table:
-            st.markdown("**Concrete Mix Composition**")
-            st.dataframe(
-                styled_df,
-                height=min(len(result) * 45 + 50, 400),
-                use_container_width=True
+        if result:
+            st.success("Mix design calculated successfully!")
+            
+            # Create DataFrame
+            df = pd.DataFrame.from_dict(result, orient='index', columns=['Value'])
+            df = df.reset_index().rename(columns={'index': 'Material'})
+            
+            # Format DataFrame
+            styled_df = (
+                df.style
+                .set_properties(subset=['Value'], **{'text-align': 'right'})
+                .format({'Value': '{:.1f}'})
             )
-        
-        with col_chart:
-            # Create pie chart (only for positive values)
-            pie_data = df[df['Value'] > 0]
-            if not pie_data.empty:
-                fig, ax = plt.subplots()
-                ax.pie(
-                    pie_data['Value'],
-                    labels=pie_data['Material'],
-                    autopct='%1.1f%%',
-                    startangle=90
-                )
-                ax.axis('equal')
-                st.pyplot(fig)
-            else:
-                st.warning("No positive values to display in pie chart")
-    
-    except Exception as e:
-        st.error(f"An error occurred while displaying results: {str(e)}")
-
-        # CSV Download
-        csv = df.to_csv().encode('utf-8')
-        st.download_button(
-            label="📥 Download CSV", 
-            data=csv, 
-            file_name="concrete_mix.csv", 
-            mime='text/csv'
-        )
-
-        # PDF Generation
-        if pie_chart_buf:
-            pdf_bytes = create_pdf_report(result, pie_chart_buf, project_name)
-            if pdf_bytes:
-                st.download_button(
-                    "📄 Download PDF Report", 
-                    pdf_bytes, 
-                    file_name=f"mix_design_{project_name.replace(' ', '_')}.pdf", 
-                    mime="application/pdf"
+            
+            # Generate chart
+            chart_buf = generate_pie_chart(result)
+            
+            # Display results
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                st.markdown("### Concrete Mix Composition")
+                st.dataframe(
+                    styled_df,
+                    height=min(len(result)*35 + 50, 400),
+                    use_container_width=True
                 )
                 
-    except Exception as e:
-        st.error(f"An error occurred during mix calculation: {str(e)}")
+                # CSV Download
+                csv = df.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    "📥 Download CSV",
+                    csv,
+                    "concrete_mix.csv",
+                    "text/csv"
+                )
+            
+            with col2:
+                if chart_buf:
+                    st.image(chart_buf, use_column_width=True)
+                else:
+                    st.warning("No chart data available")
+                
+                # PDF Download
+                if chart_buf:
+                    pdf_bytes = create_pdf_report(result, chart_buf, project_name)
+                    if pdf_bytes:
+                        st.download_button(
+                            "📄 Download PDF Report",
+                            pdf_bytes,
+                            f"mix_design_{project_name}.pdf",
+                            "application/pdf"
+                        )
 
 # --- Footer ---
 st.markdown("---")

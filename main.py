@@ -45,7 +45,7 @@ with open("style.css") as f:
 
 # Display client logo if available with better positioning
 if LOGO_PATH and os.path.exists(LOGO_PATH):
-    _, col, _ = st.columns([1, 2, 1])  # Creates a centered column
+    _, col, _ = st.columns([1, 1, 1])  # Creates a centered column
     with col:
         st.write("")  # Add spacing
         st.write("")  # Add more spacing if needed

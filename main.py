@@ -12,7 +12,7 @@ from typing import List, Dict, Optional
 from branding import CLIENT_NAME, APP_TITLE, PRIMARY_COLOR, LOGO_PATH, FOOTER_NOTE
 
 # --- Streamlit Config ---
-st.set_page_config(APP_TITLE, layout="wide")
+#st.set_page_config(APP_TITLE, layout="wide")
 
 # Initialize session state
 if 'mix_designs' not in st.session_state:

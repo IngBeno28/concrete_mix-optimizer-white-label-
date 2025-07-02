@@ -43,11 +43,13 @@ if 'default_params' not in st.session_state:
 with open("style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# Display client logo 
+# Display client logo if available with better positioning
 if LOGO_PATH and os.path.exists(LOGO_PATH):
-    st.write("")  # Add empty space above the logo
-    st.write("")  # Add another empty line for more spacing
-    st.image(LOGO_PATH, width=100)
+    _, col, _ = st.columns([1, 2, 1])  # Creates a centered column
+    with col:
+        st.write("")  # Add spacing
+        st.write("")  # Add more spacing if needed
+        st.image(LOGO_PATH, width=100)
 
 # --- ACI Reference Tables ---
 ACI_WATER_CONTENT = {

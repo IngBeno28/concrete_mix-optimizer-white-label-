@@ -43,8 +43,10 @@ if 'default_params' not in st.session_state:
 with open("style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# Display client logo if available
+# Display client logo 
 if LOGO_PATH and os.path.exists(LOGO_PATH):
+    st.write("")  # Add empty space above the logo
+    st.write("")  # Add another empty line for more spacing
     st.image(LOGO_PATH, width=100)
 
 # --- ACI Reference Tables ---

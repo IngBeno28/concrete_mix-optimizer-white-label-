@@ -43,13 +43,19 @@ if 'default_params' not in st.session_state:
 with open("style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# Display heading and logo in the same row
-col1, col2 = st.columns([1, 5])  # Adjust the ratio as needed
+# Display heading and logo in the same row with vertical alignment
+col1, col2 = st.columns([1, 5])
 with col1:
     if LOGO_PATH and os.path.exists(LOGO_PATH):
         st.image(LOGO_PATH, width=100)
 with col2:
-    st.markdown(f"<h2 style='color:{PRIMARY_COLOR};'>{APP_TITLE}</h2>", unsafe_allow_html=True)
+    st.markdown(
+        f"<h2 style='color:{PRIMARY_COLOR}; margin-top: 15px;'>{APP_TITLE}</h2>", 
+        unsafe_allow_html=True
+    )
+
+# --- Input UI ---
+project_name = st.text_input("📌 Project Name", "Unnamed Project")
 
 # --- ACI Reference Tables ---
 ACI_WATER_CONTENT = {
@@ -70,7 +76,7 @@ ACI_EXPOSURE = {
 }
 
 # --- Input UI ---
-st.markdown(f"<h2 style='color:{PRIMARY_COLOR};'>{APP_TITLE}</h2>", unsafe_allow_html=True)
+#st.markdown(f"<h2 style='color:{PRIMARY_COLOR};'>{APP_TITLE}</h2>", unsafe_allow_html=True)
 
 project_name = st.text_input("📌 Project Name", "Unnamed Project")
 

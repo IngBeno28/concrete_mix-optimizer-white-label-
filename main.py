@@ -43,11 +43,13 @@ if 'default_params' not in st.session_state:
 with open("style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-if LOGO_PATH and os.path.exists(LOGO_PATH):
-    col1, col2 = st.columns([1, 5])  # Adjust ratio as needed
-    with col1:
-        st.write("")  # Add some top spacing
+# Display heading and logo in the same row
+col1, col2 = st.columns([1, 5])  # Adjust the ratio as needed
+with col1:
+    if LOGO_PATH and os.path.exists(LOGO_PATH):
         st.image(LOGO_PATH, width=100)
+with col2:
+    st.markdown(f"<h2 style='color:{PRIMARY_COLOR};'>{APP_TITLE}</h2>", unsafe_allow_html=True)
 
 # --- ACI Reference Tables ---
 ACI_WATER_CONTENT = {

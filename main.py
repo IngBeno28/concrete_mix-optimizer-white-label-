@@ -54,9 +54,6 @@ with col2:
         unsafe_allow_html=True
     )
 
-# --- Input UI ---
-project_name = st.text_input("📌 Project Name", "Unnamed Project")
-
 # --- ACI Reference Tables ---
 ACI_WATER_CONTENT = {
     "Non-Air-Entrained": {10: 205, 20: 185, 40: 160},
@@ -76,8 +73,6 @@ ACI_EXPOSURE = {
 }
 
 # --- Input UI ---
-#st.markdown(f"<h2 style='color:{PRIMARY_COLOR};'>{APP_TITLE}</h2>", unsafe_allow_html=True)
-
 project_name = st.text_input("📌 Project Name", "Unnamed Project")
 
 # Get current parameters based on whether we're showing a new design or modifying
@@ -123,43 +118,62 @@ def calculate_mix(
 ):
     """Calculate concrete mix design based on ACI method"""
     try:
+        # Calculate target mean strength
         ft = fck + 1.34 * std_dev
+        
+        # Check w/c ratio against exposure limits
         if wcm > ACI_EXPOSURE[exposure]['max_wcm']:
-            st.warning("w/c exceeds max for exposure class")
-
-        water = ACI_WATER_CONTENT["Air-Entrained" if air_entrained else "Non-Air-Entrained"][max_agg_size]
+            st.warning("w/c ratio exceeds maximum recommended for selected exposure class")
+        
+        # Determine water content based on aggregate size and air entrainment
+        water_table = ACI_WATER_CONTENT["Air-Entrained" if air_entrained else "Non-Air-Entrained"]
+        water = water_table[max_agg_size]
+        
+        # Adjust water for slump
         water += (slump - 75) * 0.3
+        
+        # Adjust water for admixture
         if admixture:
             water *= 1 - min(0.15, admixture * 0.05)
-
+        
+        # Calculate cement content
         cement = max(water / wcm, ACI_EXPOSURE[exposure]['min_cement'])
-
+        
+        # Determine coarse aggregate volume
         try:
-            ca_vol = ACI_CA_VOLUME[round(fm,1)][max_agg_size]
-        except:
-            ca_vol = ACI_CA_VOLUME[2.7][max_agg_size]
-
+            ca_vol = ACI_CA_VOLUME[round(fm, 1)][max_agg_size]
+        except KeyError:
+            ca_vol = ACI_CA_VOLUME[2.7][max_agg_size]  # Default to FM=2.7 if exact match not found
+        
+        # Calculate coarse aggregate mass
         ca_mass = ca_vol * unit_weight_ca
-
+        
+        # Calculate absolute volumes
         cement_vol = cement / (sg_cement * 1000)
         water_vol = water / 1000
         air_vol = air_content / 100 if air_entrained else 0.01
         ca_vol_abs = ca_mass / (sg_ca * 1000)
+        
+        # Calculate fine aggregate volume and mass
         fa_vol = 1 - (cement_vol + water_vol + air_vol + ca_vol_abs)
         fa_mass = fa_vol * sg_fa * 1000
-
+        
+        # Adjust for moisture content
         fa_mass_adj = fa_mass * (1 + moist_fa / 100)
         ca_mass_adj = ca_mass * (1 + moist_ca / 100)
         water -= (fa_mass * moist_fa / 100 + ca_mass * moist_ca / 100)
-
+        
+        # Calculate admixture amount
+        admix_amount = cement * admixture / 100
+        
         return {
-            "Target Mean Strength": round(ft,2),
-            "Water": round(water,1),
-            "Cement": round(cement,1),
-            "Fine Aggregate": round(fa_mass_adj,1),
-            "Coarse Aggregate": round(ca_mass_adj,1),
-            "Air Content": round(air_content,1),
-            "Admixture": round(cement * admixture / 100,2)
+            "Target Mean Strength": round(ft, 2),
+            "Water": round(water, 1),
+            "Cement": round(cement, 1),
+            "Fine Aggregate": round(fa_mass_adj, 1),
+            "Coarse Aggregate": round(ca_mass_adj, 1),
+            "Air Content": round(air_content, 1),
+            "Admixture": round(admix_amount, 2)
         }
     except Exception as e:
         st.error(f"Calculation error: {str(e)}")
@@ -168,6 +182,7 @@ def calculate_mix(
 def generate_pie_chart(data):
     """Generate pie chart of material composition"""
     try:
+        # Filter relevant components
         material_components = {
             k: v for k, v in data.items() 
             if k in ["Water", "Cement", "Fine Aggregate", "Coarse Aggregate"] and v > 0
@@ -176,6 +191,7 @@ def generate_pie_chart(data):
         if not material_components:
             return None
             
+        # Create figure
         fig, ax = plt.subplots(figsize=(6, 6))
         wedges, texts, autotexts = ax.pie(
             material_components.values(),
@@ -184,12 +200,14 @@ def generate_pie_chart(data):
             startangle=90,
             textprops={'fontsize': 10}
         )
+        
+        # Style the chart
         ax.axis('equal')
         ax.set_title('Mix Composition', fontsize=12, pad=10)
-        
         plt.setp(autotexts, size=10, weight="bold")
         plt.setp(texts, size=10)
         
+        # Save to buffer
         buf = io.BytesIO()
         plt.savefig(buf, format='png', dpi=120, bbox_inches='tight')
         buf.seek(0)
@@ -197,7 +215,7 @@ def generate_pie_chart(data):
         return buf
         
     except Exception as e:
-        st.error(f"Chart error: {str(e)}")
+        st.error(f"Chart generation error: {str(e)}")
         return None
 
 def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
@@ -340,15 +358,15 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
     except Exception as e:
         st.error(f"PDF generation failed: {str(e)}")
         return None
-        
-# Compute or Start New Design button
+
+# --- Main Application Logic ---
 if not st.session_state.show_new_design:
     if st.button("🧪 Compute Mix Design", key="compute_mix_button"):
         result = calculate_mix(
-    fck, std_dev, exposure, max_agg_size, slump, air_entrained,
-    air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
-    unit_weight_ca, moist_fa, moist_ca
-)
+            fck, std_dev, exposure, max_agg_size, slump, air_entrained,
+            air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
+            unit_weight_ca, moist_fa, moist_ca
+        )
         if result:
             chart_buf = generate_pie_chart(result)
             st.session_state.mix_designs.append({
@@ -445,10 +463,10 @@ else:
     with col1:
         if st.button("🔄 Compute With Modified Parameters", key="compute_modified"):
             result = calculate_mix(
-    fck, std_dev, exposure, max_agg_size, slump, air_entrained,
-    air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
-    unit_weight_ca, moist_fa, moist_ca
-)
+                fck, std_dev, exposure, max_agg_size, slump, air_entrained,
+                air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
+                unit_weight_ca, moist_fa, moist_ca
+            )
             if result:
                 chart_buf = generate_pie_chart(result)
                 st.session_state.mix_designs.append({

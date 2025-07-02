@@ -1,23 +1,29 @@
-/* style.css - White Label Theme for ACI Concrete Mix Designer */
+/* style.css - Premium Dark Theme for ACI Concrete Mix Designer */
 body {
-    font-family: 'Segoe UI', sans-serif;
-    background-color: #f9fafc;
-    color: #222;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #121212;
+    color: #e0e0e0;
     margin: 0;
     padding: 0;
+    line-height: 1.6;
 }
 
-/* Golden Red Color Scheme */
+/* Elegant Black & Gold Color Scheme */
 :root {
-    --golden-red: #D4A017;
-    --golden-red-dark: #B8860B;
+    --gold: #FFD700;
+    --gold-dark: #D4AF37;
+    --black: #121212;
+    --black-light: #1E1E1E;
+    --white: #FFFFFF;
+    --gray: #B0B0B0;
 }
 
-/* Centered Header styles - now with !important to override any other styles */
-.header h1 {
-    color: var(--golden-red) !important;
+/* Main container styling */
+.stApp {
+    background-color: var(--black);
 }
 
+/* Header styles */
 .header {
     display: flex;
     flex-direction: column;
@@ -26,41 +32,152 @@ body {
     margin-bottom: 1.5em;
     padding: 1.5em 0;
     text-align: center;
-    background-color: white;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    background-color: var(--black-light);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid var(--gold);
 }
 
 .header img {
-    height: 100px;
+    height: 80px;
     margin-bottom: 15px;
     object-fit: contain;
+    filter: brightness(0) invert(1);
 }
 
 .header h1 {
     margin: 0;
-    font-size: 2.2em;
-    color: var(--golden-red) !important;  /* Added !important */
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    font-size: 2.4em;
+    color: var(--gold) !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     letter-spacing: 0.5px;
+    font-weight: 700;
 }
 
-/* Make sure all headings are golden red with !important */
-h1, h2, h3 {
-    color: var(--golden-red) !important;
+/* Heading styles */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--gold) !important;
     font-weight: 600;
-    text-align: center;
 }
 
-/* Rest of your existing styles... */
+/* Button styles */
 .stButton>button {
-    background-color: var(--golden-red);
-    color: white;
-    border-radius: 8px;
-    padding: 0.6em 1.2em;
-    font-weight: bold;
-    transition: all 0.3s ease-in-out;
+    background-color: var(--gold);
+    color: var(--black) !important;
+    border-radius: 6px;
+    padding: 0.7em 1.4em;
+    font-weight: 600;
+    transition: all 0.3s ease;
     border: none;
     font-size: 1em;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-/* ... (keep all other existing styles the same) ... */
+.stButton>button:hover {
+    background-color: var(--gold-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Input field styles */
+.stTextInput>div>div>input,
+.stNumberInput>div>div>input,
+.stSelectbox>div>div>select,
+.stSlider>div>div>div>div {
+    background-color: var(--black-light) !important;
+    color: var(--white) !important;
+    border: 1px solid #333 !important;
+    border-radius: 4px !important;
+}
+
+.stTextInput>label,
+.stNumberInput>label,
+.stSelectbox>label,
+.stSlider>label {
+    color: var(--gray) !important;
+    font-weight: 500 !important;
+}
+
+/* Expander styles */
+.stExpander {
+    background-color: var(--black-light) !important;
+    border: 1px solid #333 !important;
+    border-radius: 8px !important;
+    margin-bottom: 1em;
+}
+
+.stExpander summary {
+    color: var(--gold) !important;
+    font-weight: 600 !important;
+    padding: 0.8em 1em !important;
+}
+
+/* Dataframe styles */
+.dataframe {
+    background-color: var(--black-light) !important;
+    color: var(--white) !important;
+    border: 1px solid #333 !important;
+}
+
+/* Footer styles */
+footer {
+    color: var(--gray) !important;
+    background-color: var(--black) !important;
+    padding: 1em 0 !important;
+    border-top: 1px solid #333 !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--black-light);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gold);
+    border-radius: 4px;
+}
+
+/* Card-like elements */
+.stMetric {
+    background-color: var(--black-light) !important;
+    border: 1px solid #333 !important;
+    border-radius: 8px !important;
+    padding: 1em !important;
+}
+
+/* Tab styles */
+.stTabs [role="tablist"] {
+    background-color: var(--black-light) !important;
+    border-bottom: 1px solid #333 !important;
+}
+
+.stTabs [role="tab"] {
+    color: var(--gray) !important;
+}
+
+.stTabs [aria-selected="true"] {
+    color: var(--gold) !important;
+    border-bottom: 2px solid var(--gold) !important;
+}
+
+/* Tooltip styles */
+.stTooltip {
+    background-color: var(--black-light) !important;
+    color: var(--white) !important;
+    border: 1px solid var(--gold) !important;
+}
+
+/* Success/error message styles */
+.stAlert-success {
+    background-color: rgba(0, 200, 83, 0.1) !important;
+    border-left: 4px solid #00C853 !important;
+}
+
+.stAlert-error {
+    background-color: rgba(255, 23, 68, 0.1) !important;
+    border-left: 4px solid #FF1744 !important;
+}

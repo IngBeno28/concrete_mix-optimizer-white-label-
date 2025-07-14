@@ -1,5 +1,5 @@
 # Convert the HTML landing content into a Python function compatible with Streamlit
-streamlit_py_path = "/mnt/data/aci_mix_landing_view.py"
+streamlit_py_path = "aci_mix_landing_view.py"
 
 streamlit_function = """
 import streamlit as st

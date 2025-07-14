@@ -1,15 +1,13 @@
-streamlit_function = """
+import streamlit as st
+
 def show_pro_landing():
-    st.markdown(\"\"\"
+    st.markdown("""
     <h1 style='text-align:center;'>ACI Concrete Mix Optimizer</h1>
     <p style='text-align:center;'>Stop Guessing Your Concrete Mix. Start Optimizing It.</p>
-
     <div style='max-width:960px;margin:auto;padding:2rem;'>
-
     <div style='background:#fff;padding:2rem;margin:2rem 0;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);'>
       <h2>Design accurate, standards-based concrete mix proportions in minutes — no spreadsheets, no confusion, no wasted materials.</h2>
     </div>
-
     <div style='background:#fff;padding:2rem;margin:2rem 0;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);'>
       <h3>🔍 Built by engineers. Powered by ACI.</h3>
       <ul>
@@ -20,7 +18,6 @@ def show_pro_landing():
         <li>🎯 100% online and instant</li>
       </ul>
     </div>
-
     <div style='background:#fff;padding:2rem;margin:2rem 0;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);'>
       <h3>Use Cases</h3>
       <ul>
@@ -29,7 +26,6 @@ def show_pro_landing():
         <li>✔️ Grad Students / Research Labs</li>
       </ul>
     </div>
-
     <div style='background:#fff;padding:2rem;margin:2rem 0;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);'>
       <h3>Pricing</h3>
       <div style='display:flex;gap:2rem;flex-wrap:wrap;'>
@@ -53,10 +49,8 @@ def show_pro_landing():
         </div>
       </div>
     </div>
-
     <a href='https://acemix.streamlit.app' target='_blank'>👉 Start Designing for Free</a><br>
     <a href='/sample-report.pdf' target='_blank'>📄 View Sample PDF Report</a>
-
     <div style='background:#fff;padding:2rem;margin:2rem 0;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);'>
       <h3>What You’ll Save</h3>
       <ul>
@@ -66,14 +60,9 @@ def show_pro_landing():
         <li>😤 Time lost to manual recalculations</li>
       </ul>
     </div>
-
     </div>
     <footer style='text-align:center;padding:1rem;font-size:0.9rem;color:#777;'>
       🧱 GHA Mix Optimizer | Built by a Civil Engineer, for Civil Engineers | 
       <a href='https://flutterwave.com/pay/concretepro' style='color: #007acc'>🔐 Unlock Pro Access</a>
     </footer>
-    \"\"\", unsafe_allow_html=True)
-"""
-
-if __name__ == "__main__":
-    show_pro_landing()
+    """, unsafe_allow_html=True)

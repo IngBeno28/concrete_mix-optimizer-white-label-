@@ -1,6 +1,6 @@
 streamlit_function = """
 def show_pro_landing():
-    st.markdown("""
+    st.markdown(\"\"\"
     <h1 style='text-align:center;'>ACI Concrete Mix Optimizer</h1>
     <p style='text-align:center;'>Stop Guessing Your Concrete Mix. Start Optimizing It.</p>
 
@@ -72,7 +72,7 @@ def show_pro_landing():
       🧱 GHA Mix Optimizer | Built by a Civil Engineer, for Civil Engineers | 
       <a href='https://flutterwave.com/pay/concretepro' style='color: #007acc'>🔐 Unlock Pro Access</a>
     </footer>
-    """, unsafe_allow_html=True)
+    \"\"\", unsafe_allow_html=True)
 """
 
 if __name__ == "__main__":

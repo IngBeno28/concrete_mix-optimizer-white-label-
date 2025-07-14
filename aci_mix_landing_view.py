@@ -1,6 +1,3 @@
-# Convert the HTML landing content into a Python function compatible with Streamlit
-streamlit_py_path = "main_pro_landing_integrated.py"
-
 streamlit_function = """
 import streamlit as st
 
@@ -80,7 +77,5 @@ def show_pro_landing():
     \"\"\", unsafe_allow_html=True)
 """
 
-with open(streamlit_py_path, "w") as f:
-    f.write(streamlit_function)
-
-streamlit_py_path
+if __name__ == "__main__":
+    show_pro_landing()

@@ -18,3 +18,4 @@ LOGO_CONFIG = {
     'padding': '10px 0'         # CSS padding around logo
     
 }
+

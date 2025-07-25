@@ -1,183 +1,87 @@
 /* style.css - Premium Dark Theme for ACI Concrete Mix Designer */
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #121212;
-    color: #e0e0e0;
-    margin: 0;
-    padding: 0;
-    line-height: 1.6;
-}
-
-/* Elegant Black & Gold Color Scheme */
 :root {
+    --primary: #0052cc;           /* From PRIMARY_COLOR in branding.py */
+    --primary-dark: #003d99;      /* Darker variant */
+    --primary-light: #4d88ff;     /* Lighter variant */
     --gold: #FFD700;
     --gold-dark: #D4AF37;
     --black: #121212;
     --black-light: #1E1E1E;
     --white: #FFFFFF;
     --gray: #B0B0B0;
+    --success: #00C853;
+    --error: #FF1744;
 }
 
 /* Main container styling */
 .stApp {
     background-color: var(--black);
+    color: var(--white);
 }
 
 /* Header styles */
 .header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 1.5em;
-    padding: 1.5em 0;
-    text-align: center;
     background-color: var(--black-light);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    border-bottom: 1px solid var(--gold);
-}
-
-.header img {
-    height: 80px;
-    margin-bottom: 15px;
-    object-fit: contain;
-    filter: brightness(0) invert(1);
+    border-bottom: 2px solid var(--primary);
 }
 
 .header h1 {
-    margin: 0;
-    font-size: 2.4em;
-    color: var(--gold) !important;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    letter-spacing: 0.5px;
-    font-weight: 700;
-}
-
-/* Heading styles */
-h1, h2, h3, h4, h5, h6 {
-    color: var(--gold) !important;
-    font-weight: 600;
+    color: var(--primary) !important;
 }
 
 /* Button styles */
 .stButton>button {
-    background-color: var(--gold);
-    color: var(--black) !important;
-    border-radius: 6px;
-    padding: 0.7em 1.4em;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    border: none;
-    font-size: 1em;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    background-color: var(--primary);
+    color: var(--white) !important;
 }
 
 .stButton>button:hover {
-    background-color: var(--gold-dark);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    background-color: var(--primary-dark);
 }
 
 /* Input field styles */
 .stTextInput>div>div>input,
 .stNumberInput>div>div>input,
-.stSelectbox>div>div>select,
-.stSlider>div>div>div>div {
+.stSelectbox>div>div>select {
     background-color: var(--black-light) !important;
     color: var(--white) !important;
-    border: 1px solid #333 !important;
-    border-radius: 4px !important;
-}
-
-.stTextInput>label,
-.stNumberInput>label,
-.stSelectbox>label,
-.stSlider>label {
-    color: var(--gray) !important;
-    font-weight: 500 !important;
+    border: 1px solid var(--primary) !important;
 }
 
 /* Expander styles */
 .stExpander {
     background-color: var(--black-light) !important;
-    border: 1px solid #333 !important;
-    border-radius: 8px !important;
-    margin-bottom: 1em;
+    border: 1px solid var(--primary) !important;
 }
 
 .stExpander summary {
-    color: var(--gold) !important;
-    font-weight: 600 !important;
-    padding: 0.8em 1em !important;
+    color: var(--primary) !important;
 }
 
 /* Dataframe styles */
 .dataframe {
     background-color: var(--black-light) !important;
-    color: var(--white) !important;
-    border: 1px solid #333 !important;
-}
-
-/* Footer styles */
-footer {
-    color: var(--gray) !important;
-    background-color: var(--black) !important;
-    padding: 1em 0 !important;
-    border-top: 1px solid #333 !important;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--black-light);
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--gold);
-    border-radius: 4px;
-}
-
-/* Card-like elements */
-.stMetric {
-    background-color: var(--black-light) !important;
-    border: 1px solid #333 !important;
-    border-radius: 8px !important;
-    padding: 1em !important;
-}
-
-/* Tab styles */
-.stTabs [role="tablist"] {
-    background-color: var(--black-light) !important;
-    border-bottom: 1px solid #333 !important;
-}
-
-.stTabs [role="tab"] {
-    color: var(--gray) !important;
-}
-
-.stTabs [aria-selected="true"] {
-    color: var(--gold) !important;
-    border-bottom: 2px solid var(--gold) !important;
-}
-
-/* Tooltip styles */
-.stTooltip {
-    background-color: var(--black-light) !important;
-    color: var(--white) !important;
-    border: 1px solid var(--gold) !important;
+    border: 1px solid var(--primary) !important;
 }
 
 /* Success/error message styles */
 .stAlert-success {
     background-color: rgba(0, 200, 83, 0.1) !important;
-    border-left: 4px solid #00C853 !important;
+    border-left: 4px solid var(--success) !important;
 }
 
 .stAlert-error {
     background-color: rgba(255, 23, 68, 0.1) !important;
-    border-left: 4px solid #FF1744 !important;
+    border-left: 4px solid var(--error) !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar-thumb {
+    background: var(--primary);
+}
+
+/* Tab styles */
+.stTabs [aria-selected="true"] {
+    color: var(--primary) !important;
+    border-bottom: 2px solid var(--primary) !important;
 }

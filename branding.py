@@ -1,7 +1,7 @@
 CLIENT_NAME = "Automation_hub Engineering Group Limited"
 APP_TITLE = "Enhanced ACI 211.1 Concrete Mix Designer"
 PRIMARY_COLOR = "#0052cc"
-LOGO_PATH = "assets/main.png"  # Path to your logo file
+LOGO_PATH = "assets/2.png"  # Path to your logo file
 LOGO_ALT_TEXT = f"{CLIENT_NAME} - {APP_TITLE}"
 FOOTER_NOTE = "© 2025 ACI Mix Designer | Built for engineering precision"
 

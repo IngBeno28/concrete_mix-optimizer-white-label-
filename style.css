@@ -29,6 +29,21 @@
     color: var(--primary) !important;
 }
 
+/* Minimal Logo Styling */
+.stImage img {
+    max-width: 120px !important;  /* Hard limit matching Python code */
+    height: auto !important;
+    padding: 5px 0 !important;    /* Reduced padding */
+    filter: brightness(0) invert(0); /* Original colors */
+    object-fit: contain;
+}
+
+/* Compact Header */
+.st-emotion-cache-1avcm0n {
+    padding: 0.5rem 1rem !important;  /* Reduced header padding */
+    min-height: 60px !important;      /* More compact header bar */
+}
+
 /* Button styles */
 .stButton>button {
     background-color: var(--primary);

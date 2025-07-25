@@ -16,4 +16,5 @@ LOGO_CONFIG = {
     'formats': ['png', 'svg'],  # Preferred file formats (SVG recommended)
     'alt_text': LOGO_ALT_TEXT,
     'padding': '10px 0'         # CSS padding around logo
+    
 }

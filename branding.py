@@ -1,4 +1,4 @@
-CLIENT_NAME = "Zhongmei Engineering Group"
+CLIENT_NAME = "Automation_hub Engineering Group Limited"
 APP_TITLE = "Enhanced ACI 211.1 Concrete Mix Designer"
 PRIMARY_COLOR = "#0052cc"
 LOGO_PATH = "assets/main.png"  # Path to your logo file

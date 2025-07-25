@@ -80,31 +80,39 @@ except FileNotFoundError:
     """, unsafe_allow_html=True)
 
 # --- Enhanced Logo Display ---
+# Update the logo display section in your main.py (replace the existing code)
 def display_header():
-    """Display the application header with responsive logo"""
+    """Display a minimal, professional header with properly scaled logo"""
     col1, col2 = st.columns([1, 5])
     with col1:
         if LOGO_PATH and os.path.exists(LOGO_PATH):
             try:
-                logo_width = LOGO_CONFIG['default_width']
+                # More compact logo sizing for professional look
+                logo_width = 120  # Reduced from 250 for minimal appearance
+                logo_height = int(logo_width * (LOGO_CONFIG['default_height']/LOGO_CONFIG['default_width']))
+                
                 st.image(
                     LOGO_PATH,
                     width=logo_width,
-                    caption=LOGO_ALT_TEXT,
-                    output_format='auto'
+                    # height=logo_height,  # Optional: Uncomment if you need fixed height
+                    output_format='auto',
+                    use_column_width=False  # Prevents automatic scaling
                 )
             except Exception as e:
                 st.error(f"Error loading logo: {str(e)}")
-                st.markdown(f"**{CLIENT_NAME}**")
     with col2:
         st.markdown(
-            f"<h2 style='color:var(--primary); margin-top: 15px;'>{APP_TITLE}</h2>", 
+            f"""
+            <h2 style='color:{PRIMARY_COLOR}; 
+                       margin-top: 5px;
+                       font-size: 1.5rem;
+                       font-weight: 500;'>
+                {APP_TITLE}
+            </h2>
+            """, 
             unsafe_allow_html=True
         )
 
-display_header()
-
-# [Rest of your existing code remains the same...]
 # --- ACI Reference Tables ---
 ACI_WATER_CONTENT = {
     "Non-Air-Entrained": {10: 205, 20: 185, 40: 160},

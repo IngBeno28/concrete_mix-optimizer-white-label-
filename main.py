@@ -9,10 +9,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
 from typing import List, Dict, Optional
-from branding import CLIENT_NAME, APP_TITLE, PRIMARY_COLOR, LOGO_PATH, FOOTER_NOTE
+from branding import CLIENT_NAME, APP_TITLE, PRIMARY_COLOR, LOGO_PATH, FOOTER_NOTE, LOGO_CONFIG, LOGO_ALT_TEXT
 
 # --- Streamlit Config ---
-st.set_page_config(layout="wide")
+st.set_page_config(
+    page_title=APP_TITLE,
+    page_icon="🏗️",
+    layout="wide"
+)
 
 # Initialize session state
 if 'mix_designs' not in st.session_state:
@@ -39,21 +43,68 @@ if 'default_params' not in st.session_state:
         'moist_ca': 1.0
     }
 
-# Load CSS
-with open("style.css") as f:
-    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+# --- Enhanced CSS Loading with Error Handling ---
+try:
+    with open("style.css") as f:
+        css_content = f.read()
+        # Inject primary color variable into CSS
+        css_content = f":root {{ --primary: {PRIMARY_COLOR}; }}\n" + css_content
+        st.markdown(f"<style>{css_content}</style>", unsafe_allow_html=True)
+except FileNotFoundError:
+    st.warning("Custom stylesheet not found. Using default styles.")
+    # Fallback basic styling
+    st.markdown(f"""
+    <style>
+        :root {{
+            --primary: {PRIMARY_COLOR};
+            --gold: #FFD700;
+            --gold-dark: #D4AF37;
+            --black: #121212;
+            --black-light: #1E1E1E;
+            --white: #FFFFFF;
+            --gray: #B0B0B0;
+        }}
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--black);
+            color: var(--white);
+        }}
+        .stButton>button {{
+            background-color: var(--primary);
+            color: white !important;
+        }}
+        h1, h2, h3 {{
+            color: var(--primary) !important;
+        }}
+    </style>
+    """, unsafe_allow_html=True)
 
-# Display heading and logo in the same row with vertical alignment
-col1, col2 = st.columns([1, 5])
-with col1:
-    if LOGO_PATH and os.path.exists(LOGO_PATH):
-        st.image(LOGO_PATH, width=100)
-with col2:
-    st.markdown(
-        f"<h2 style='color:{PRIMARY_COLOR}; margin-top: 15px;'>{APP_TITLE}</h2>", 
-        unsafe_allow_html=True
-    )
+# --- Enhanced Logo Display ---
+def display_header():
+    """Display the application header with responsive logo"""
+    col1, col2 = st.columns([1, 5])
+    with col1:
+        if LOGO_PATH and os.path.exists(LOGO_PATH):
+            try:
+                logo_width = LOGO_CONFIG['default_width']
+                st.image(
+                    LOGO_PATH,
+                    width=logo_width,
+                    caption=LOGO_ALT_TEXT,
+                    output_format='auto'
+                )
+            except Exception as e:
+                st.error(f"Error loading logo: {str(e)}")
+                st.markdown(f"**{CLIENT_NAME}**")
+    with col2:
+        st.markdown(
+            f"<h2 style='color:var(--primary); margin-top: 15px;'>{APP_TITLE}</h2>", 
+            unsafe_allow_html=True
+        )
 
+display_header()
+
+# [Rest of your existing code remains the same...]
 # --- ACI Reference Tables ---
 ACI_WATER_CONTENT = {
     "Non-Air-Entrained": {10: 205, 20: 185, 40: 160},

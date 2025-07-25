@@ -29,19 +29,34 @@
     color: var(--primary) !important;
 }
 
-/* Minimal Logo Styling */
-.stImage img {
-    max-width: 120px !important;  /* Hard limit matching Python code */
+/* Enhanced Logo Styling */
+div.stImage {
+    min-width: 120px !important;
+    min-height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 5px 0 !important;
+    margin: 0 !important;
+}
+
+div.stImage > div > img,
+div.stImage > img {
+    max-width: 120px !important;
     height: auto !important;
-    padding: 5px 0 !important;    /* Reduced padding */
-    filter: brightness(0) invert(0); /* Original colors */
-    object-fit: contain;
+    object-fit: contain !important;
+    filter: brightness(0) invert(0) !important;
+}
+
+/* Fix for Streamlit's image container */
+div[data-testid="stImage"] {
+    overflow: visible !important;
 }
 
 /* Compact Header */
 .st-emotion-cache-1avcm0n {
-    padding: 0.5rem 1rem !important;  /* Reduced header padding */
-    min-height: 60px !important;      /* More compact header bar */
+    padding: 0.5rem 1rem !important;
+    min-height: 60px !important;
 }
 
 /* Button styles */

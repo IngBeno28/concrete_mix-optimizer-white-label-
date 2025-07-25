@@ -80,26 +80,51 @@ except FileNotFoundError:
     """, unsafe_allow_html=True)
 
 # --- Enhanced Logo Display ---
-# Update the logo display section in your main.py (replace the existing code)
 def display_header():
     """Display a minimal, professional header with properly scaled logo"""
     col1, col2 = st.columns([1, 5])
+    
     with col1:
-        if LOGO_PATH and os.path.exists(LOGO_PATH):
+        if LOGO_PATH:
+            # Debugging: Print the logo path being checked
+            st.session_state.logo_debug = f"Checking logo at: {LOGO_PATH}"
+            
             try:
-                # More compact logo sizing for professional look
-                logo_width = 120  # Reduced from 250 for minimal appearance
-                logo_height = int(logo_width * (LOGO_CONFIG['default_height']/LOGO_CONFIG['default_width']))
-                
-                st.image(
-                    LOGO_PATH,
-                    width=logo_width,
-                    # height=logo_height,  # Optional: Uncomment if you need fixed height
-                    output_format='auto',
-                    use_column_width=False  # Prevents automatic scaling
-                )
+                # Verify the file exists and is readable
+                if os.path.exists(LOGO_PATH):
+                    # More compact logo sizing for professional look
+                    logo_width = 120  # Reduced from 250 for minimal appearance
+                    
+                    # Debugging: Verify image can be opened
+                    try:
+                        with Image.open(LOGO_PATH) as img:
+                            img.verify()  # Verify it's a valid image file
+                        
+                        st.image(
+                            LOGO_PATH,
+                            width=logo_width,
+                            output_format='auto',
+                            use_column_width=False,
+                            caption=LOGO_ALT_TEXT if st.secrets.get("DEBUG_MODE", False) else ""
+                        )
+                        
+                    except (IOError, SyntaxError) as e:
+                        st.error(f"Invalid image file: {str(e)}")
+                        st.warning(f"Attempted to load: {LOGO_PATH}")
+                        # Fallback to text if image fails
+                        st.markdown(f"**{CLIENT_NAME}**")
+                        
+                else:
+                    st.warning(f"Logo file not found at: {LOGO_PATH}")
+                    st.markdown(f"**{CLIENT_NAME}**")
+                    
             except Exception as e:
-                st.error(f"Error loading logo: {str(e)}")
+                st.error(f"Logo loading error: {str(e)}")
+                st.markdown(f"**{CLIENT_NAME}**")
+        else:
+            st.warning("No logo path configured")
+            st.markdown(f"**{CLIENT_NAME}**")
+    
     with col2:
         st.markdown(
             f"""
@@ -112,6 +137,16 @@ def display_header():
             """, 
             unsafe_allow_html=True
         )
+
+    # Debugging output (visible only in development)
+    if st.secrets.get("DEBUG_MODE", False):
+        st.write("Debug Info:")
+        st.json({
+            "logo_path": LOGO_PATH,
+            "exists": os.path.exists(LOGO_PATH) if LOGO_PATH else False,
+            "config": LOGO_CONFIG
+        })
+        
 
 # --- ACI Reference Tables ---
 ACI_WATER_CONTENT = {

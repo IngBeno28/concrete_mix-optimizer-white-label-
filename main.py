@@ -287,25 +287,25 @@ def generate_pie_chart(data):
         if not material_components:
             return None
             
-        # Create figure
-        fig, ax = plt.subplots(figsize=(6, 6))
+        # Create figure - INCREASED SIZE for better visibility
+        fig, ax = plt.subplots(figsize=(8, 8))  # Increased from (6, 6) to (8, 8)
         wedges, texts, autotexts = ax.pie(
             material_components.values(),
             labels=material_components.keys(),
             autopct='%1.1f%%',
             startangle=90,
-            textprops={'fontsize': 10}
+            textprops={'fontsize': 12}  # Increased font size
         )
         
         # Style the chart
         ax.axis('equal')
-        ax.set_title('Mix Composition', fontsize=12, pad=10)
-        plt.setp(autotexts, size=10, weight="bold")
-        plt.setp(texts, size=10)
+        ax.set_title('Mix Composition', fontsize=14, pad=15)  # Increased font size
+        plt.setp(autotexts, size=12, weight="bold")  # Increased font size
+        plt.setp(texts, size=12)  # Increased font size
         
         # Save to buffer
         buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=120, bbox_inches='tight')
+        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')  # Increased DPI for better quality
         buf.seek(0)
         plt.close(fig)
         return buf
@@ -614,7 +614,9 @@ if st.session_state.mix_designs:
             
             with col2:
                 if design.get('chart'):
-                    st.image(design['chart'], use_container_width=True)
+                    # Reset the buffer position and display with fixed size
+                    design['chart'].seek(0)
+                    st.image(design['chart'], width=300)  # Fixed width for better visibility
             
             st.caption(f"Calculated at {design['timestamp']}")
 

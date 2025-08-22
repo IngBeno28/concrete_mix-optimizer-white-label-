@@ -1,32 +1,78 @@
 /* style.css - Premium Dark Theme for ACI Concrete Mix Designer */
 :root {
-    --primary: #0052cc;           /* From PRIMARY_COLOR in branding.py */
-    --primary-dark: #003d99;      /* Darker variant */
-    --primary-light: #4d88ff;     /* Lighter variant */
+    /* Primary Colors - From PRIMARY_COLOR in branding.py */
+    --primary: #0052cc;
+    --primary-dark: #003d99;
+    --primary-light: #4d88ff;
+    --primary-gradient: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    
+    /* Accent Colors */
     --gold: #FFD700;
     --gold-dark: #D4AF37;
+    --gold-gradient: linear-gradient(135deg, var(--gold), var(--gold-dark));
+    
+    /* Neutral Colors */
     --black: #121212;
     --black-light: #1E1E1E;
+    --black-lighter: #2A2A2A;
     --white: #FFFFFF;
     --gray: #B0B0B0;
+    --gray-dark: #7A7A7A;
+    
+    /* Status Colors */
     --success: #00C853;
+    --warning: #FF9800;
     --error: #FF1744;
+    --info: #2196F3;
+    
+    /* Effects */
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    --shadow-hover: 0 6px 25px rgba(0, 0, 0, 0.35);
+    --border-radius: 8px;
+    --transition: all 0.3s ease;
 }
 
-/* Main container styling */
+/* Global Styles */
+* {
+    box-sizing: border-box;
+}
+
 .stApp {
     background-color: var(--black);
     color: var(--white);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-/* Header styles */
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--black-light);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-light);
+}
+
+/* Header & Navigation */
 .header {
-    background-color: var(--black-light);
+    background: var(--black-light);
     border-bottom: 2px solid var(--primary);
+    box-shadow: var(--shadow);
+    padding: 0.5rem 1rem;
 }
 
 .header h1 {
     color: var(--primary) !important;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Enhanced Logo Styling */
@@ -38,6 +84,9 @@ div.stImage {
     justify-content: center !important;
     padding: 5px 0 !important;
     margin: 0 !important;
+    background: var(--black-light);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--primary);
 }
 
 div.stImage > div > img,
@@ -46,6 +95,7 @@ div.stImage > img {
     height: auto !important;
     object-fit: contain !important;
     filter: brightness(0) invert(0) !important;
+    padding: 5px;
 }
 
 /* Fix for Streamlit's image container */
@@ -57,61 +107,228 @@ div[data-testid="stImage"] {
 .st-emotion-cache-1avcm0n {
     padding: 0.5rem 1rem !important;
     min-height: 60px !important;
+    background: var(--black-light) !important;
 }
 
-/* Button styles */
-.stButton>button {
-    background-color: var(--primary);
+/* Button Styles */
+.stButton > button {
+    background: var(--primary-gradient);
     color: var(--white) !important;
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 0.5rem 1.5rem;
+    font-weight: 600;
+    transition: var(--transition);
+    box-shadow: var(--shadow);
 }
 
-.stButton>button:hover {
-    background-color: var(--primary-dark);
+.stButton > button:hover {
+    background: linear-gradient(135deg, var(--primary-light), var(--primary));
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
 }
 
-/* Input field styles */
-.stTextInput>div>div>input,
-.stNumberInput>div>div>input,
-.stSelectbox>div>div>select {
+.stButton > button:active {
+    transform: translateY(0);
+}
+
+/* Input Fields */
+.stTextInput > div > div > input,
+.stNumberInput > div > div > input,
+.stSelectbox > div > div > select,
+.stTextArea > div > div > textarea {
     background-color: var(--black-light) !important;
     color: var(--white) !important;
-    border: 1px solid var(--primary) !important;
+    border: 2px solid var(--gray-dark) !important;
+    border-radius: var(--border-radius);
+    padding: 0.75rem;
+    transition: var(--transition);
 }
 
-/* Expander styles */
+.stTextInput > div > div > input:focus,
+.stNumberInput > div > div > input:focus,
+.stSelectbox > div > div > select:focus,
+.stTextArea > div > div > textarea:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.1);
+}
+
+/* Placeholder text */
+.stTextInput > div > div > input::placeholder,
+.stNumberInput > div > div > input::placeholder,
+.stTextArea > div > div > textarea::placeholder {
+    color: var(--gray-dark) !important;
+}
+
+/* Expander Styles */
 .stExpander {
     background-color: var(--black-light) !important;
-    border: 1px solid var(--primary) !important;
+    border: 2px solid var(--primary) !important;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
 }
 
 .stExpander summary {
     color: var(--primary) !important;
+    font-weight: 600;
+    padding: 1rem;
+    cursor: pointer;
 }
 
-/* Dataframe styles */
+.stExpander summary:hover {
+    background-color: rgba(0, 82, 204, 0.1);
+}
+
+.stExpander div[data-testid="stExpanderContent"] {
+    padding: 1rem;
+    background-color: var(--black-lighter);
+}
+
+/* Dataframe & Table Styles */
 .dataframe {
     background-color: var(--black-light) !important;
     border: 1px solid var(--primary) !important;
+    border-radius: var(--border-radius);
+    overflow: hidden;
 }
 
-/* Success/error message styles */
+.dataframe thead th {
+    background: var(--primary-gradient) !important;
+    color: var(--white) !important;
+    font-weight: 600;
+    border-bottom: 2px solid var(--primary-dark) !important;
+}
+
+.dataframe tbody tr:nth-child(even) {
+    background-color: var(--black-lighter) !important;
+}
+
+.dataframe tbody tr:hover {
+    background-color: rgba(0, 82, 204, 0.1) !important;
+}
+
+/* Alert & Message Styles */
 .stAlert-success {
     background-color: rgba(0, 200, 83, 0.1) !important;
     border-left: 4px solid var(--success) !important;
+    border-radius: var(--border-radius);
+    padding: 1rem;
 }
 
 .stAlert-error {
     background-color: rgba(255, 23, 68, 0.1) !important;
     border-left: 4px solid var(--error) !important;
+    border-radius: var(--border-radius);
+    padding: 1rem;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar-thumb {
-    background: var(--primary);
+.stAlert-warning {
+    background-color: rgba(255, 152, 0, 0.1) !important;
+    border-left: 4px solid var(--warning) !important;
+    border-radius: var(--border-radius);
+    padding: 1rem;
 }
 
-/* Tab styles */
+.stAlert-info {
+    background-color: rgba(33, 150, 243, 0.1) !important;
+    border-left: 4px solid var(--info) !important;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+}
+
+/* Tab Styles */
 .stTabs [aria-selected="true"] {
     color: var(--primary) !important;
-    border-bottom: 2px solid var(--primary) !important;
+    border-bottom: 3px solid var(--primary) !important;
+    font-weight: 600;
+}
+
+.stTabs [aria-selected="false"] {
+    color: var(--gray) !important;
+}
+
+.stTabs button {
+    padding: 0.75rem 1.5rem;
+    transition: var(--transition);
+}
+
+.stTabs button:hover {
+    color: var(--primary-light) !important;
+    background-color: rgba(0, 82, 204, 0.1);
+}
+
+/* Additional Streamlit Components */
+/* Sliders */
+.stSlider > div > div > div > div {
+    background: var(--primary-gradient) !important;
+}
+
+.stSlider > div > div > div > div:hover {
+    background: var(--primary-light) !important;
+}
+
+/* Radio Buttons */
+.stRadio > div {
+    background-color: var(--black-light);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--gray-dark);
+}
+
+.stRadio > div > label {
+    color: var(--white) !important;
+}
+
+/* Checkboxes */
+.stCheckbox > div > label {
+    color: var(--white) !important;
+}
+
+.stCheckbox > div > div > div {
+    background-color: var(--black-light);
+    border: 2px solid var(--gray-dark);
+}
+
+.stCheckbox > div > div > div[aria-checked="true"] {
+    background-color: var(--primary);
+    border-color: var(--primary);
+}
+
+/* Metric Cards */
+[data-testid="stMetric"] {
+    background-color: var(--black-light);
+    border: 1px solid var(--primary);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+}
+
+[data-testid="stMetricLabel"] {
+    color: var(--gray) !important;
+}
+
+[data-testid="stMetricValue"] {
+    color: var(--primary) !important;
+    font-weight: 700;
+}
+
+/* Code Blocks */
+.stCodeBlock {
+    background-color: var(--black-light) !important;
+    border: 1px solid var(--primary) !important;
+    border-radius: var(--border-radius);
+}
+
+/* Divider */
+hr {
+    border-color: var(--primary) !important;
+    opacity: 0.3;
+}
+
+/* Focus outlines for accessibility */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--primary-light) !important;
+    outline-offset: 2px;
 }

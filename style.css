@@ -1,15 +1,16 @@
-/* style.css - Premium Dark Theme for ACI Concrete Mix Designer */
+/* style.css - Premium Gold & Red Dark Theme for ACI Concrete Mix Designer */
 :root {
-    /* Primary Colors - From PRIMARY_COLOR in branding.py */
-    --primary: #0052cc;
-    --primary-dark: #003d99;
-    --primary-light: #4d88ff;
+    /* Primary Colors - Gold Theme */
+    --primary: #D4AF37;           /* Rich gold */
+    --primary-dark: #B8860B;      /* Darker gold */
+    --primary-light: #FFD700;     /* Bright gold */
     --primary-gradient: linear-gradient(135deg, var(--primary), var(--primary-dark));
     
-    /* Accent Colors */
-    --gold: #FFD700;
-    --gold-dark: #D4AF37;
-    --gold-gradient: linear-gradient(135deg, var(--gold), var(--gold-dark));
+    /* Accent Colors - Red Theme */
+    --accent: #B22222;           /* Fire brick red */
+    --accent-dark: #8B0000;      /* Dark red */
+    --accent-light: #DC143C;     /* Crimson */
+    --accent-gradient: linear-gradient(135deg, var(--accent), var(--accent-dark));
     
     /* Neutral Colors */
     --black: #121212;
@@ -19,11 +20,11 @@
     --gray: #B0B0B0;
     --gray-dark: #7A7A7A;
     
-    /* Status Colors */
-    --success: #00C853;
-    --warning: #FF9800;
-    --error: #FF1744;
-    --info: #2196F3;
+    /* Status Colors (Adjusted to complement scheme) */
+    --success: #32CD32;          /* Lime green */
+    --warning: #FF8C00;          /* Dark orange */
+    --error: #DC143C;            /* Crimson */
+    --info: #4169E1;             /* Royal blue */
     
     /* Effects */
     --shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
@@ -110,10 +111,10 @@ div[data-testid="stImage"] {
     background: var(--black-light) !important;
 }
 
-/* Button Styles */
+/* Button Styles - Using Gold for Primary, Red for Accent */
 .stButton > button {
     background: var(--primary-gradient);
-    color: var(--white) !important;
+    color: var(--black) !important;
     border: none;
     border-radius: var(--border-radius);
     padding: 0.5rem 1.5rem;
@@ -130,6 +131,16 @@ div[data-testid="stImage"] {
 
 .stButton > button:active {
     transform: translateY(0);
+}
+
+/* Secondary Buttons (using red accent) */
+.stButton > button.secondary {
+    background: var(--accent-gradient);
+    color: var(--white) !important;
+}
+
+.stButton > button.secondary:hover {
+    background: linear-gradient(135deg, var(--accent-light), var(--accent));
 }
 
 /* Input Fields */
@@ -150,7 +161,7 @@ div[data-testid="stImage"] {
 .stSelectbox > div > div > select:focus,
 .stTextArea > div > div > textarea:focus {
     border-color: var(--primary) !important;
-    box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.1);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
 }
 
 /* Placeholder text */
@@ -176,7 +187,7 @@ div[data-testid="stImage"] {
 }
 
 .stExpander summary:hover {
-    background-color: rgba(0, 82, 204, 0.1);
+    background-color: rgba(212, 175, 55, 0.1);
 }
 
 .stExpander div[data-testid="stExpanderContent"] {
@@ -194,7 +205,7 @@ div[data-testid="stImage"] {
 
 .dataframe thead th {
     background: var(--primary-gradient) !important;
-    color: var(--white) !important;
+    color: var(--black) !important;
     font-weight: 600;
     border-bottom: 2px solid var(--primary-dark) !important;
 }
@@ -204,33 +215,33 @@ div[data-testid="stImage"] {
 }
 
 .dataframe tbody tr:hover {
-    background-color: rgba(0, 82, 204, 0.1) !important;
+    background-color: rgba(212, 175, 55, 0.1) !important;
 }
 
 /* Alert & Message Styles */
 .stAlert-success {
-    background-color: rgba(0, 200, 83, 0.1) !important;
+    background-color: rgba(50, 205, 50, 0.1) !important;
     border-left: 4px solid var(--success) !important;
     border-radius: var(--border-radius);
     padding: 1rem;
 }
 
 .stAlert-error {
-    background-color: rgba(255, 23, 68, 0.1) !important;
+    background-color: rgba(220, 20, 60, 0.1) !important;
     border-left: 4px solid var(--error) !important;
     border-radius: var(--border-radius);
     padding: 1rem;
 }
 
 .stAlert-warning {
-    background-color: rgba(255, 152, 0, 0.1) !important;
+    background-color: rgba(255, 140, 0, 0.1) !important;
     border-left: 4px solid var(--warning) !important;
     border-radius: var(--border-radius);
     padding: 1rem;
 }
 
 .stAlert-info {
-    background-color: rgba(33, 150, 243, 0.1) !important;
+    background-color: rgba(65, 105, 225, 0.1) !important;
     border-left: 4px solid var(--info) !important;
     border-radius: var(--border-radius);
     padding: 1rem;
@@ -254,7 +265,7 @@ div[data-testid="stImage"] {
 
 .stTabs button:hover {
     color: var(--primary-light) !important;
-    background-color: rgba(0, 82, 204, 0.1);
+    background-color: rgba(212, 175, 55, 0.1);
 }
 
 /* Additional Streamlit Components */
@@ -331,4 +342,18 @@ select:focus-visible,
 textarea:focus-visible {
     outline: 2px solid var(--primary-light) !important;
     outline-offset: 2px;
+}
+
+/* Special accent elements using red */
+.accent-border {
+    border: 2px solid var(--accent) !important;
+}
+
+.accent-text {
+    color: var(--accent) !important;
+}
+
+.accent-bg {
+    background-color: var(--accent) !important;
+    color: var(--white) !important;
 }

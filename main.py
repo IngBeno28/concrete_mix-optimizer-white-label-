@@ -146,7 +146,9 @@ def display_header():
             "exists": os.path.exists(LOGO_PATH) if LOGO_PATH else False,
             "config": LOGO_CONFIG
         })
-        
+
+# --- ADDED: Call the display_header function ---
+display_header()
 
 # --- ACI Reference Tables ---
 ACI_WATER_CONTENT = {

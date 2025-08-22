@@ -147,7 +147,7 @@ def display_header():
             "config": LOGO_CONFIG
         })
 
-# --- ADDED: Call the display_header function ---
+# ---Call the display_header function ---
 display_header()
 
 # --- ACI Reference Tables ---
@@ -288,7 +288,7 @@ def generate_pie_chart(data):
             return None
             
         # Create figure - INCREASED SIZE for better visibility
-        fig, ax = plt.subplots(figsize=(8, 8))  # Increased from (6, 6) to (8, 8)
+        fig, ax = plt.subplots(figsize=(10, 10)) 
         wedges, texts, autotexts = ax.pie(
             material_components.values(),
             labels=material_components.keys(),

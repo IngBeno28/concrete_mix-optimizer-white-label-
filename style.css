@@ -76,27 +76,28 @@
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-/* Enhanced Logo Styling */
+/* Enhanced Logo Styling - FIXED */
 div.stImage {
-    min-width: 120px !important;
-    min-height: 40px !important;
+    min-width: 80px !important;  /* Reduced from 120px */
+    min-height: 30px !important; /* Reduced from 40px */
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 5px 0 !important;
+    padding: 2px 0 !important;   /* Reduced padding */
     margin: 0 !important;
-    background: var(--black-light);
+    background: transparent !important; /* Changed from black-light to transparent */
     border-radius: var(--border-radius);
-    border: 1px solid var(--primary);
+    border: none !important;     /* Removed border */
 }
 
+/* FIXED: Removed the problematic filter that was making logo dark */
 div.stImage > div > img,
 div.stImage > img {
-    max-width: 120px !important;
+    max-width: 80px !important;  /* Reduced from 120px */
     height: auto !important;
     object-fit: contain !important;
-    filter: brightness(0) invert(0) !important;
-    padding: 5px;
+    padding: 2px;                /* Reduced padding */
+    filter: none !important;     /* REMOVED the problematic filter */
 }
 
 /* Fix for Streamlit's image container */
@@ -109,6 +110,13 @@ div[data-testid="stImage"] {
     padding: 0.5rem 1rem !important;
     min-height: 60px !important;
     background: var(--black-light) !important;
+}
+
+/* FIXED: Ensure primary color is applied to all headings */
+h1, h2, h3, h4, h5, h6,
+.stMarkdown h1, .stMarkdown h2, .stMarkdown h3, 
+.stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
+    color: var(--primary) !important;
 }
 
 /* Button Styles - Using Gold for Primary, Red for Accent */

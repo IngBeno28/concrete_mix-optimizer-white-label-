@@ -100,11 +100,11 @@ def display_header():
                         with Image.open(LOGO_PATH) as img:
                             img.verify()  # Verify it's a valid image file
                         
+                        # FIXED: Removed deprecated use_column_width and problematic filter
                         st.image(
                             LOGO_PATH,
                             width=logo_width,
-                            output_format='auto',
-                            use_column_width=False,
+                            use_container_width=False,  # Fixed deprecated parameter
                             caption=LOGO_ALT_TEXT if st.secrets.get("DEBUG_MODE", False) else ""
                         )
                         

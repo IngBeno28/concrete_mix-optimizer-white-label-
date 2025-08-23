@@ -397,7 +397,7 @@ def calculate_mix(
         return None
 
 def generate_pie_chart(data):
-    """Generate pie chart of material composition"""
+    """Generate pie chart of material composition with improved styling"""
     try:
         # Filter relevant components
         material_components = {
@@ -408,25 +408,52 @@ def generate_pie_chart(data):
         if not material_components:
             return None
             
-        # Create figure -
+        # Create figure with better styling
+        plt.style.use('default')
         fig, ax = plt.subplots(figsize=(8, 8))
+        
+        # Define colors for each material
+        colors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0']  # Green, Blue, Orange, Purple
+        
         wedges, texts, autotexts = ax.pie(
             material_components.values(),
             labels=material_components.keys(),
             autopct='%1.1f%%',
             startangle=90,
-            textprops={'fontsize': 12}
+            colors=colors[:len(material_components)],
+            textprops={'fontsize': 12, 'color': 'white'},
+            wedgeprops={'edgecolor': 'black', 'linewidth': 1}
         )
         
         # Style the chart
         ax.axis('equal')
-        ax.set_title('Mix Composition', fontsize=14, pad=15)
-        plt.setp(autotexts, size=12, weight="bold")
-        plt.setp(texts, size=12)
+        ax.set_title('Mix Composition', fontsize=16, pad=20, color='white', fontweight='bold')
         
-        # Save to buffer
+        # Style the text elements
+        for autotext in autotexts:
+            autotext.set_color('white')
+            autotext.set_fontweight('bold')
+            autotext.set_fontsize(12)
+        
+        for text in texts:
+            text.set_color('white')
+            text.set_fontsize(12)
+        
+        # Set background color to match app theme
+        fig.patch.set_facecolor('#121212')
+        ax.set_facecolor('#1E1E1E')
+        
+        # Save to buffer with higher DPI and transparent background
         buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+        plt.savefig(
+            buf, 
+            format='png', 
+            dpi=150, 
+            bbox_inches='tight',
+            facecolor=fig.get_facecolor(),
+            edgecolor='none',
+            transparent=False
+        )
         buf.seek(0)
         plt.close(fig)
         return buf
@@ -583,9 +610,21 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
             # Add chart if available
             if design.get('chart'):
                 try:
+                    # Save chart to temporary file with proper handling
                     with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
-                        Image.open(design['chart']).convert('RGB').save(tmp.name, quality=95)
-                        pdf.image(tmp.name, x=(pdf.w - 100)/2, y=pdf.get_y()+5, w=100)
+                        # Open the image and convert to RGB if necessary
+                        img = Image.open(design['chart'])
+                        if img.mode != 'RGB':
+                            img = img.convert('RGB')
+                        img.save(tmp.name, format='PNG', quality=95)
+                        
+                        # Add chart to PDF with proper positioning
+                        y_position = pdf.get_y() + 5
+                        if y_position > 200:  # If we're too far down the page, add a new page
+                            pdf.add_page()
+                            y_position = 20
+                        
+                        pdf.image(tmp.name, x=(pdf.w - 80)/2, y=y_position, w=80)
                         os.unlink(tmp.name)
                 except Exception as e:
                     st.error(f"Chart rendering error: {str(e)}")
@@ -702,8 +741,8 @@ else:
                                  st.session_state.mix_designs[-1]['inputs']['moist_ca'],
                                  key="mod_moist_ca")
 
-    # Industrialized Construction Parameters
-    with st.expander("🏭 Industrialized Parameters (Click to Modify)"):
+    # Industrialized Construction Parameters (collapsed by default)
+    with st.expander("🏭 Industrialized Construction Parameters (Click to Modify)"):
         col1, col2 = st.columns(2)
         
         with col1:
@@ -725,7 +764,7 @@ else:
             early_strength_required = st.checkbox(
                 "Early Strength Required", 
                 st.session_state.mix_designs[-1]['inputs']['early_strength_required'],
-                key="mod_early_strength"
+                key="mod_early_strength_required"
             )
             
             steam_curing = st.checkbox(
@@ -738,13 +777,53 @@ else:
                 "Target Demould Time (hours)", 
                 4, 48, 
                 st.session_state.mix_designs[-1]['inputs']['target_demould_time'],
-                key="mod_demould_time"
+                key="mod_target_demould_time"
             )
 
-    # Action buttons
-    col1, col2 = st.columns(2)
+    # Display current mix design results
+    current_design = st.session_state.mix_designs[-1]
+    
+    st.markdown("---")
+    st.subheader("📊 Current Mix Design Results")
+    
+    # Display results in columns
+    col1, col2 = st.columns([2, 1])
+    
     with col1:
-        if st.button("🔄 Compute With Modified Parameters", key="compute_modified"):
+        st.markdown("**Mix Proportions (per m³)**")
+        results_data = {
+            "Target Mean Strength": f"{current_design['data']['Target Mean Strength']} MPa",
+            "Water": f"{current_design['data']['Water']} kg",
+            "Cement": f"{current_design['data']['Cement']} kg",
+            "Fine Aggregate": f"{current_design['data']['Fine Aggregate']} kg",
+            "Coarse Aggregate": f"{current_design['data']['Coarse Aggregate']} kg",
+            "Air Content": f"{current_design['data']['Air Content']}%",
+            "Admixture": f"{current_design['data']['Admixture']} kg"
+        }
+        
+        for param, value in results_data.items():
+            st.markdown(f"**{param}:** {value}")
+        
+        # Industrialized recommendations
+        st.markdown("**🏭 Industrialized Recommendations**")
+        factors = current_design['data']['Industrialized Factors']
+        st.markdown(f"- **Recommended Admixtures:** {', '.join(factors['recommended_admixtures']) or 'Standard mix'}")
+        st.markdown(f"- **Curing Method:** {factors['curing_method']}")
+        st.markdown(f"- **Target Demould Strength:** {factors['demould_strength']} MPa")
+        st.markdown(f"- **Production Method:** {current_design['data']['Production Method']}")
+    
+    with col2:
+        if current_design['chart']:
+            try:
+                st.image(current_design['chart'], caption="Mix Composition", use_container_width=True)
+            except Exception as e:
+                st.error(f"Error displaying chart: {str(e)}")
+    
+    # Action buttons
+    col1, col2, col3 = st.columns([1, 1, 2])
+    
+    with col1:
+        if st.button("🔄 Recalculate with Modified Parameters"):
             result = calculate_mix(
                 fck, std_dev, exposure, max_agg_size, slump, air_entrained,
                 air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
@@ -753,7 +832,7 @@ else:
             )
             if result:
                 chart_buf = generate_pie_chart(result)
-                st.session_state.mix_designs.append({
+                st.session_state.mix_designs[-1] = {
                     'data': result,
                     'chart': chart_buf,
                     'timestamp': datetime.now().strftime("%H:%M:%S"),
@@ -780,81 +859,59 @@ else:
                         'steam_curing': steam_curing,
                         'target_demould_time': target_demould_time
                     }
-                })
-                st.success("New mix design calculated!")
+                }
+                st.success("Mix design recalculated!")
                 st.rerun()
     
     with col2:
-        if st.button("🆕 Start Fresh Design", key="fresh_design"):
+        if st.button("➕ Create New Design"):
             st.session_state.show_new_design = False
-            st.session_state.mix_designs = []  # Clear all previous designs
             st.rerun()
+    
+    with col3:
+        if st.button("📄 Generate PDF Report"):
+            if st.session_state.mix_designs:
+                pdf_data = create_pdf_report_multiple(st.session_state.mix_designs, project_name)
+                if pdf_data:
+                    st.download_button(
+                        label="⬇️ Download PDF Report",
+                        data=pdf_data,
+                        file_name=f"concrete_mix_designs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf"
+                    )
+            else:
+                st.warning("No mix designs to generate report")
 
-# Display accumulated designs
-if st.session_state.mix_designs:
-    st.subheader(f"📚 Accumulated Designs ({len(st.session_state.mix_designs)})")
+# --- Display saved designs ---
+if len(st.session_state.mix_designs) > 0:
+    st.markdown("---")
+    st.subheader("📋 Saved Mix Designs")
     
-    # Display industrialized recommendations
-    latest_design = st.session_state.mix_designs[-1]
-    industrialized_factors = latest_design['data']['Industrialized Factors']
-    
-    st.info(f"""
-    **🏭 Industrialized Construction Recommendations:**
-    - **Recommended Admixtures:** {', '.join(industrialized_factors['recommended_admixtures']) or 'Standard mix'}
-    - **Curing Method:** {industrialized_factors['curing_method']}
-    - **Target Demould Strength:** {industrialized_factors['demould_strength']} MPa
-    - **Construction Type:** {latest_design['data']['Construction Type']}
-    - **Production Quality:** {PRODUCTION_METHODS[latest_design['inputs']['production_method']]['quality_control']}
-    """)
-    
-    for i, design in enumerate(st.session_state.mix_designs, 1):
-        with st.expander(f"Design #{i} - {design['data']['Target Mean Strength']} MPa ({design['data']['Construction Type']})", expanded=(i==len(st.session_state.mix_designs))):
+    for i, design in enumerate(st.session_state.mix_designs):
+        with st.expander(f"Design #{i+1} - {design['timestamp']} - {design['data']['Construction Type']}"):
             col1, col2 = st.columns([2, 1])
             
             with col1:
-                # Filter out industrialized factors from display
-                display_data = {k: v for k, v in design['data'].items() if k not in ['Industrialized Factors', 'Construction Type', 'Production Method', 'Demould Strength']}
-                st.dataframe(
-                    pd.DataFrame.from_dict(display_data, orient='index', columns=['Value']),
-                    height=300,
-                    use_container_width=True
-                )
+                st.markdown(f"**Target Strength:** {design['data']['Target Mean Strength']} MPa")
+                st.markdown(f"**Construction Type:** {design['data']['Construction Type']}")
+                st.markdown(f"**Water:** {design['data']['Water']} kg/m³")
+                st.markdown(f"**Cement:** {design['data']['Cement']} kg/m³")
+                st.markdown(f"**Fine Aggregate:** {design['data']['Fine Aggregate']} kg/m³")
+                st.markdown(f"**Coarse Aggregate:** {design['data']['Coarse Aggregate']} kg/m³")
+                st.markdown(f"**Air Content:** {design['data']['Air Content']}%")
+                st.markdown(f"**Admixture:** {design['data']['Admixture']} kg/m³")
             
             with col2:
-                if design.get('chart'):
-                    # Reset the buffer position and display with fixed size
-                    design['chart'].seek(0)
-                    st.image(design['chart'], width=300)  # Fixed width for better visibility
-            
-            st.caption(f"Calculated at {design['timestamp']} | Construction Type: {design['data']['Construction Type']}")
+                if design['chart']:
+                    try:
+                        st.image(design['chart'], caption="Mix Composition", use_container_width=True)
+                    except Exception as e:
+                        st.error(f"Error displaying chart: {str(e)}")
 
-    # Master PDF and Clear options
-    st.markdown("---")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("📄 Generate Master PDF Report", key="generate_pdf"):
-            with st.spinner(f"Compiling {len(st.session_state.mix_designs)} designs..."):
-                pdf_bytes = create_pdf_report_multiple(
-                    st.session_state.mix_designs,
-                    project_name
-                )
-                if pdf_bytes:
-                    st.download_button(
-                        "💾 Download Full Industrialized Report",
-                        pdf_bytes,
-                        f"industrialized_concrete_mix_designs_{project_name}.pdf",
-                        "application/pdf",
-                        key="download_pdf"
-                    )
-    
-    with col2:
-        if st.button("🧹 Clear All Designs", key="clear_designs"):
-            st.session_state.mix_designs = []
-            st.session_state.show_new_design = False
-            st.success("All designs cleared!")
-            st.rerun()
-        
 # --- Footer ---
 st.markdown("---")
-st.caption(FOOTER_NOTE)
+st.markdown(f"""
+<div style='text-align: center; color: var(--gray); font-size: 0.8rem;'>
+    {FOOTER_NOTE} | {CLIENT_NAME} | Generated on {datetime.now().strftime('%Y-%m-%d')}
+</div>
+""", unsafe_allow_html=True)

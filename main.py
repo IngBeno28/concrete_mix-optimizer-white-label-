@@ -408,7 +408,7 @@ def generate_pie_chart(data):
         if not material_components:
             return None
             
-        # Create figure - INCREASED SIZE for better visibility
+        # Create figure -
         fig, ax = plt.subplots(figsize=(8, 8))
         wedges, texts, autotexts = ax.pie(
             material_components.values(),

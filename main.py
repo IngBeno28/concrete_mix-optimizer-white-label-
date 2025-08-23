@@ -40,7 +40,12 @@ if 'default_params' not in st.session_state:
         'sg_ca': 2.65,
         'unit_weight_ca': 1600,
         'moist_fa': 2.0,
-        'moist_ca': 1.0
+        'moist_ca': 1.0,
+        'construction_type': 'Traditional Cast-in-Place',
+        'production_method': 'Batch Plant',
+        'early_strength_required': False,
+        'steam_curing': False,
+        'target_demould_time': 18
     }
 
 # --- Enhanced CSS Loading with Error Handling ---
@@ -79,6 +84,43 @@ except FileNotFoundError:
     </style>
     """, unsafe_allow_html=True)
 
+# --- Industrialized Construction Parameters ---
+CONSTRUCTION_TYPES = {
+    'Traditional Cast-in-Place': {
+        'slump_range': (75, 150),
+        'strength_gain': 'Normal',
+        'curing_method': 'Standard',
+        'demould_time': '18-24 hours'
+    },
+    'Precast Elements': {
+        'slump_range': (25, 75),
+        'strength_gain': 'Rapid',
+        'curing_method': 'Accelerated',
+        'demould_time': '8-12 hours',
+        'wcm_reduction': 0.05
+    },
+    'Modular Construction': {
+        'slump_range': (50, 100),
+        'strength_gain': 'High Early',
+        'curing_method': 'Controlled',
+        'demould_time': '6-10 hours',
+        'wcm_reduction': 0.07
+    },
+    'Tilt-Up Panels': {
+        'slump_range': (75, 125),
+        'strength_gain': 'Moderate',
+        'curing_method': 'Standard',
+        'demould_time': '16-20 hours'
+    }
+}
+
+PRODUCTION_METHODS = {
+    'Batch Plant': {'quality_control': 'High', 'consistency': 'Excellent'},
+    'Mobile Mixer': {'quality_control': 'Medium', 'consistency': 'Good'},
+    'Ready-Mix': {'quality_control': 'High', 'consistency': 'Excellent'},
+    'Site Batching': {'quality_control': 'Variable', 'consistency': 'Fair'}
+}
+
 # --- Enhanced Logo Display ---
 def display_header():
     """Display a minimal, professional header with properly scaled logo"""
@@ -86,38 +128,24 @@ def display_header():
     
     with col1:
         if LOGO_PATH:
-            # Debugging: Print the logo path being checked
-            st.session_state.logo_debug = f"Checking logo at: {LOGO_PATH}"
-            
             try:
-                # Verify the file exists and is readable
                 if os.path.exists(LOGO_PATH):
-                    # More compact logo sizing for professional look
-                    logo_width = 120  # Reduced from 250 for minimal appearance
-                    
-                    # Debugging: Verify image can be opened
+                    logo_width = 120
                     try:
                         with Image.open(LOGO_PATH) as img:
-                            img.verify()  # Verify it's a valid image file
-                        
-                        # FIXED: Removed deprecated use_column_width and problematic filter
+                            img.verify()
                         st.image(
                             LOGO_PATH,
                             width=logo_width,
-                            use_container_width=False,  # Fixed deprecated parameter
+                            use_container_width=False,
                             caption=LOGO_ALT_TEXT if st.secrets.get("DEBUG_MODE", False) else ""
                         )
-                        
                     except (IOError, SyntaxError) as e:
                         st.error(f"Invalid image file: {str(e)}")
-                        st.warning(f"Attempted to load: {LOGO_PATH}")
-                        # Fallback to text if image fails
                         st.markdown(f"**{CLIENT_NAME}**")
-                        
                 else:
                     st.warning(f"Logo file not found at: {LOGO_PATH}")
                     st.markdown(f"**{CLIENT_NAME}**")
-                    
             except Exception as e:
                 st.error(f"Logo loading error: {str(e)}")
                 st.markdown(f"**{CLIENT_NAME}**")
@@ -128,26 +156,16 @@ def display_header():
     with col2:
         st.markdown(
             f"""
-            <h2 style='color:{PRIMARY_COLOR}; 
-                       margin-top: 5px;
-                       font-size: 1.5rem;
-                       font-weight: 500;'>
+            <h2 style='color:{PRIMARY_COLOR}; margin-top: 5px; font-size: 1.5rem; font-weight: 500;'>
                 {APP_TITLE}
             </h2>
+            <p style='color: var(--gray); font-size: 0.9rem; margin-top: -5px;'>
+                Industrialized Construction Ready Mix Designs
+            </p>
             """, 
             unsafe_allow_html=True
         )
 
-    # Debugging output (visible only in development)
-    if st.secrets.get("DEBUG_MODE", False):
-        st.write("Debug Info:")
-        st.json({
-            "logo_path": LOGO_PATH,
-            "exists": os.path.exists(LOGO_PATH) if LOGO_PATH else False,
-            "config": LOGO_CONFIG
-        })
-
-# ---Call the display_header function ---
 display_header()
 
 # --- ACI Reference Tables ---
@@ -168,14 +186,56 @@ ACI_EXPOSURE = {
     "Severe": {"max_wcm": 0.45, "min_cement": 335}
 }
 
-# --- Input UI ---
+# --- Industrialized Construction Inputs ---
 project_name = st.text_input("📌 Project Name", "Unnamed Project")
 
-# Get current parameters based on whether we're showing a new design or modifying
+# Get current parameters
 if st.session_state.show_new_design and st.session_state.mix_designs:
     current_params = st.session_state.mix_designs[-1]['inputs']
 else:
     current_params = st.session_state.default_params
+
+with st.expander("🏭 Industrialized Construction Parameters", expanded=True):
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        construction_type = st.selectbox(
+            "Construction Type", 
+            list(CONSTRUCTION_TYPES.keys()),
+            index=list(CONSTRUCTION_TYPES.keys()).index(current_params['construction_type'])
+        )
+        
+        production_method = st.selectbox(
+            "Production Method", 
+            list(PRODUCTION_METHODS.keys()),
+            index=list(PRODUCTION_METHODS.keys()).index(current_params['production_method'])
+        )
+    
+    with col2:
+        early_strength_required = st.checkbox(
+            "Early Strength Required", 
+            current_params['early_strength_required']
+        )
+        
+        steam_curing = st.checkbox(
+            "Steam Curing", 
+            current_params['steam_curing']
+        )
+        
+        target_demould_time = st.slider(
+            "Target Demould Time (hours)", 
+            4, 48, current_params['target_demould_time']
+        )
+
+# Display industrialized construction recommendations
+construction_info = CONSTRUCTION_TYPES[construction_type]
+st.info(f"""
+**{construction_type} Recommendations:**
+- **Slump Range:** {construction_info['slump_range'][0]} - {construction_info['slump_range'][1]} mm
+- **Strength Gain:** {construction_info['strength_gain']}
+- **Curing Method:** {construction_info['curing_method']}
+- **Typical Demould Time:** {construction_info['demould_time']}
+""")
 
 with st.expander("📋 ACI Design Inputs", expanded=True):
     col1, col2, col3 = st.columns(3)
@@ -189,12 +249,32 @@ with st.expander("📋 ACI Design Inputs", expanded=True):
     with col2:
         max_agg_size = st.selectbox("Max Aggregate Size (mm)", [10, 20, 40], 
                                   index=[10, 20, 40].index(current_params['max_agg_size']))
-        slump = st.slider("Slump (mm)", 25, 200, current_params['slump'])
+        
+        # Adjust slump based on construction type
+        recommended_slump = construction_info['slump_range']
+        slump = st.slider(
+            "Slump (mm)", 
+            25, 200, 
+            min(max(current_params['slump'], recommended_slump[0]), recommended_slump[1]),
+            help=f"Recommended range for {construction_type}: {recommended_slump[0]}-{recommended_slump[1]} mm"
+        )
+        
         air_entrained = st.checkbox("Air Entrained", current_params['air_entrained'])
         air_content = st.slider("Target Air Content (%)", 1.0, 8.0, current_params['air_content']) if air_entrained else 0.0
 
     with col3:
-        wcm = st.number_input("w/c Ratio", 0.3, 0.7, current_params['wcm'])
+        # Adjust w/c ratio for industrialized construction
+        base_wcm = current_params['wcm']
+        if 'wcm_reduction' in construction_info:
+            base_wcm = max(0.3, base_wcm - construction_info['wcm_reduction'])
+        
+        wcm = st.number_input(
+            "w/c Ratio", 
+            0.3, 0.7, 
+            base_wcm,
+            help="Reduced for industrialized construction requirements" if 'wcm_reduction' in construction_info else ""
+        )
+        
         admixture = st.number_input("Admixture (%)", 0.0, 5.0, current_params['admixture'])
         fm = st.slider("FA Fineness Modulus", 2.4, 3.0, current_params['fm'], step=0.1)
 
@@ -206,22 +286,36 @@ with st.expander("🔬 Material Properties"):
     moist_fa = st.number_input("FA Moisture (%)", 0.0, 10.0, current_params['moist_fa'])
     moist_ca = st.number_input("CA Moisture (%)", 0.0, 10.0, current_params['moist_ca'])
 
-# --- Mix Design Logic ---
+# --- Enhanced Mix Design Logic for Industrialized Construction ---
 def calculate_mix(
     fck, std_dev, exposure, max_agg_size, slump, air_entrained,
     air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
-    unit_weight_ca, moist_fa, moist_ca
+    unit_weight_ca, moist_fa, moist_ca, construction_type, production_method,
+    early_strength_required, steam_curing, target_demould_time
 ):
-    """Calculate concrete mix design based on ACI method"""
+    """Calculate concrete mix design with industrialized construction considerations"""
     try:
         # Calculate target mean strength
         ft = fck + 1.34 * std_dev
         
-        # Check w/c ratio against exposure limits
-        if wcm > ACI_EXPOSURE[exposure]['max_wcm']:
-            st.warning("w/c ratio exceeds maximum recommended for selected exposure class")
+        # Industrialized construction adjustments
+        construction_info = CONSTRUCTION_TYPES[construction_type]
         
-        # Determine water content based on aggregate size and air entrainment
+        # Adjust for early strength requirements
+        strength_adjustment = 1.0
+        if early_strength_required:
+            strength_adjustment = 1.15  # 15% strength increase for early demould
+            ft *= strength_adjustment
+        
+        # Check w/c ratio against exposure limits
+        max_wcm = ACI_EXPOSURE[exposure]['max_wcm']
+        if 'wcm_reduction' in construction_info:
+            max_wcm -= construction_info['wcm_reduction']
+        
+        if wcm > max_wcm:
+            st.warning(f"w/c ratio exceeds maximum recommended for {construction_type} ({max_wcm})")
+        
+        # Determine water content
         water_table = ACI_WATER_CONTENT["Air-Entrained" if air_entrained else "Non-Air-Entrained"]
         water = water_table[max_agg_size]
         
@@ -235,11 +329,15 @@ def calculate_mix(
         # Calculate cement content
         cement = max(water / wcm, ACI_EXPOSURE[exposure]['min_cement'])
         
+        # Increase cement for early strength
+        if early_strength_required:
+            cement *= 1.1  # 10% additional cement for early strength
+        
         # Determine coarse aggregate volume
         try:
             ca_vol = ACI_CA_VOLUME[round(fm, 1)][max_agg_size]
         except KeyError:
-            ca_vol = ACI_CA_VOLUME[2.7][max_agg_size]  # Default to FM=2.7 if exact match not found
+            ca_vol = ACI_CA_VOLUME[2.7][max_agg_size]
         
         # Calculate coarse aggregate mass
         ca_mass = ca_vol * unit_weight_ca
@@ -262,6 +360,25 @@ def calculate_mix(
         # Calculate admixture amount
         admix_amount = cement * admixture / 100
         
+        # Industrialized construction recommendations
+        industrialized_factors = {
+            'recommended_admixtures': [],
+            'curing_method': 'Standard',
+            'demould_strength': 10.0  # MPa
+        }
+        
+        if early_strength_required:
+            industrialized_factors['recommended_admixtures'].extend(['Superplasticizer', 'Accelerator'])
+            industrialized_factors['demould_strength'] = 15.0
+        
+        if steam_curing:
+            industrialized_factors['curing_method'] = 'Steam Curing'
+            industrialized_factors['demould_strength'] = 20.0
+            industrialized_factors['recommended_admixtures'].append('Steam Curing Compatible')
+        
+        if construction_type in ['Precast Elements', 'Modular Construction']:
+            industrialized_factors['recommended_admixtures'].extend(['Water Reducer', 'Viscosity Modifier'])
+        
         return {
             "Target Mean Strength": round(ft, 2),
             "Water": round(water, 1),
@@ -269,7 +386,11 @@ def calculate_mix(
             "Fine Aggregate": round(fa_mass_adj, 1),
             "Coarse Aggregate": round(ca_mass_adj, 1),
             "Air Content": round(air_content, 1),
-            "Admixture": round(admix_amount, 2)
+            "Admixture": round(admix_amount, 2),
+            "Industrialized Factors": industrialized_factors,
+            "Construction Type": construction_type,
+            "Production Method": production_method,
+            "Demould Strength": industrialized_factors['demould_strength']
         }
     except Exception as e:
         st.error(f"Calculation error: {str(e)}")
@@ -288,24 +409,24 @@ def generate_pie_chart(data):
             return None
             
         # Create figure - INCREASED SIZE for better visibility
-        fig, ax = plt.subplots(figsize=(10, 10)) 
+        fig, ax = plt.subplots(figsize=(8, 8))
         wedges, texts, autotexts = ax.pie(
             material_components.values(),
             labels=material_components.keys(),
             autopct='%1.1f%%',
             startangle=90,
-            textprops={'fontsize': 12}  # Increased font size
+            textprops={'fontsize': 12}
         )
         
         # Style the chart
         ax.axis('equal')
-        ax.set_title('Mix Composition', fontsize=14, pad=15)  # Increased font size
-        plt.setp(autotexts, size=12, weight="bold")  # Increased font size
-        plt.setp(texts, size=12)  # Increased font size
+        ax.set_title('Mix Composition', fontsize=14, pad=15)
+        plt.setp(autotexts, size=12, weight="bold")
+        plt.setp(texts, size=12)
         
         # Save to buffer
         buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')  # Increased DPI for better quality
+        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight')
         buf.seek(0)
         plt.close(fig)
         return buf
@@ -361,6 +482,7 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
             pdf.cell(0, 10, safe_text(f"Design #{i}"), 0, 1, 'C')
             pdf.set_font("Arial", '', 12)
             pdf.cell(0, 8, safe_text(f"Target Strength: {design['data']['Target Mean Strength']} MPa"), 0, 1, 'C')
+            pdf.cell(0, 8, safe_text(f"Construction Type: {design['data']['Construction Type']}"), 0, 1, 'C')
             pdf.cell(0, 8, safe_text(f"Calculated: {design['timestamp']}"), 0, 1, 'C')
             pdf.ln(10)
 
@@ -377,22 +499,35 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
             
             pdf.set_font("Arial", '', 10)
             for param, value in design['data'].items():
-                pdf.set_x((pdf.w - sum(col_widths))/2)
-                pdf.cell(col_widths[0], 8, safe_text(param), 1)
-                pdf.cell(col_widths[1], 8, safe_text(f"{value:.2f}"), 1, 0, 'C')
-                pdf.cell(col_widths[2], 8, safe_text({
-                    "Target Mean Strength": "MPa",
-                    "Water": "kg/m³",
-                    "Cement": "kg/m³",
-                    "Fine Aggregate": "kg/m³",
-                    "Coarse Aggregate": "kg/m³",
-                    "Air Content": "%",
-                    "Admixture": "kg/m³"
-                }.get(param, "-")), 1, 0, 'C')
-                pdf.ln(8)
+                if param not in ['Industrialized Factors', 'Construction Type', 'Production Method', 'Demould Strength']:
+                    pdf.set_x((pdf.w - sum(col_widths))/2)
+                    pdf.cell(col_widths[0], 8, safe_text(param), 1)
+                    pdf.cell(col_widths[1], 8, safe_text(f"{value:.2f}"), 1, 0, 'C')
+                    pdf.cell(col_widths[2], 8, safe_text({
+                        "Target Mean Strength": "MPa",
+                        "Water": "kg/m³",
+                        "Cement": "kg/m³",
+                        "Fine Aggregate": "kg/m³",
+                        "Coarse Aggregate": "kg/m³",
+                        "Air Content": "%",
+                        "Admixture": "kg/m³"
+                    }.get(param, "-")), 1, 0, 'C')
+                    pdf.ln(8)
+
+            # --- Industrialized Construction Recommendations ---
+            pdf.ln(10)
+            pdf.set_font("Arial", 'B', 12)
+            pdf.cell(0, 10, safe_text("Industrialized Construction Recommendations"), 0, 1, 'C')
+            
+            industrialized_factors = design['data']['Industrialized Factors']
+            pdf.set_font("Arial", '', 10)
+            pdf.multi_cell(0, 8, safe_text(f"Recommended Admixtures: {', '.join(industrialized_factors['recommended_admixtures']) or 'Standard mix'}"))
+            pdf.multi_cell(0, 8, safe_text(f"Curing Method: {industrialized_factors['curing_method']}"))
+            pdf.multi_cell(0, 8, safe_text(f"Target Demould Strength: {industrialized_factors['demould_strength']} MPa"))
+            pdf.multi_cell(0, 8, safe_text(f"Production Method: {design['data']['Production Method']}"))
+            pdf.ln(5)
 
             # --- Design Parameters Table ---
-            pdf.ln(10)
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(0, 10, safe_text("Design Parameters"), 0, 1, 'C')
             
@@ -417,7 +552,14 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
                 [f"Target Air Content", f"{params['air_content']}%" if params['air_entrained'] else "N/A", ""],
                 [f"w/c Ratio", f"{params['wcm']}", ""],
                 [f"Admixture", f"{params['admixture']}%", ""],
-                [f"FA Fineness Modulus", f"{params['fm']}", ""]
+                [f"FA Fineness Modulus", f"{params['fm']}", ""],
+                ["", "", ""],
+                ["Industrialized Parameters", "", ""],
+                [f"Construction Type", f"{params['construction_type']}", ""],
+                [f"Production Method", f"{params['production_method']}", ""],
+                [f"Early Strength", f"{'Yes' if params['early_strength_required'] else 'No'}", ""],
+                [f"Steam Curing", f"{'Yes' if params['steam_curing'] else 'No'}", ""],
+                [f"Target Demould Time", f"{params['target_demould_time']} hours", ""]
             ]
 
             # Create parameter table
@@ -428,7 +570,7 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
                 pdf.set_x((pdf.w - sum(param_col_widths))/2)
                 
                 # Style headers differently
-                if row[0] in ["Material Properties", "Mix Parameters"]:
+                if row[0] in ["Material Properties", "Mix Parameters", "Industrialized Parameters"]:
                     pdf.set_font("Arial", 'B', 10)
                     pdf.cell(sum(param_col_widths), 8, safe_text(row[0]), 1, 1, 'C')
                     pdf.set_font("Arial", '', 10)
@@ -457,11 +599,12 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
 
 # --- Main Application Logic ---
 if not st.session_state.show_new_design:
-    if st.button("🧪 Compute Mix Design", key="compute_mix_button"):
+    if st.button("🧪 Compute Industrialized Mix Design", key="compute_mix_button"):
         result = calculate_mix(
             fck, std_dev, exposure, max_agg_size, slump, air_entrained,
             air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
-            unit_weight_ca, moist_fa, moist_ca
+            unit_weight_ca, moist_fa, moist_ca, construction_type, production_method,
+            early_strength_required, steam_curing, target_demould_time
         )
         if result:
             chart_buf = generate_pie_chart(result)
@@ -485,10 +628,15 @@ if not st.session_state.show_new_design:
                     'sg_ca': sg_ca,
                     'unit_weight_ca': unit_weight_ca,
                     'moist_fa': moist_fa,
-                    'moist_ca': moist_ca
+                    'moist_ca': moist_ca,
+                    'construction_type': construction_type,
+                    'production_method': production_method,
+                    'early_strength_required': early_strength_required,
+                    'steam_curing': steam_curing,
+                    'target_demould_time': target_demould_time
                 }
             })
-            st.success("Mix design calculated and saved!")
+            st.success("Industrialized mix design calculated and saved!")
             st.session_state.show_new_design = True
             st.rerun()
 else:
@@ -554,6 +702,45 @@ else:
                                  st.session_state.mix_designs[-1]['inputs']['moist_ca'],
                                  key="mod_moist_ca")
 
+    # Industrialized Construction Parameters
+    with st.expander("🏭 Industrialized Parameters (Click to Modify)"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            construction_type = st.selectbox(
+                "Construction Type", 
+                list(CONSTRUCTION_TYPES.keys()),
+                index=list(CONSTRUCTION_TYPES.keys()).index(st.session_state.mix_designs[-1]['inputs']['construction_type']),
+                key="mod_construction_type"
+            )
+            
+            production_method = st.selectbox(
+                "Production Method", 
+                list(PRODUCTION_METHODS.keys()),
+                index=list(PRODUCTION_METHODS.keys()).index(st.session_state.mix_designs[-1]['inputs']['production_method']),
+                key="mod_production_method"
+            )
+        
+        with col2:
+            early_strength_required = st.checkbox(
+                "Early Strength Required", 
+                st.session_state.mix_designs[-1]['inputs']['early_strength_required'],
+                key="mod_early_strength"
+            )
+            
+            steam_curing = st.checkbox(
+                "Steam Curing", 
+                st.session_state.mix_designs[-1]['inputs']['steam_curing'],
+                key="mod_steam_curing"
+            )
+            
+            target_demould_time = st.slider(
+                "Target Demould Time (hours)", 
+                4, 48, 
+                st.session_state.mix_designs[-1]['inputs']['target_demould_time'],
+                key="mod_demould_time"
+            )
+
     # Action buttons
     col1, col2 = st.columns(2)
     with col1:
@@ -561,7 +748,8 @@ else:
             result = calculate_mix(
                 fck, std_dev, exposure, max_agg_size, slump, air_entrained,
                 air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
-                unit_weight_ca, moist_fa, moist_ca
+                unit_weight_ca, moist_fa, moist_ca, construction_type, production_method,
+                early_strength_required, steam_curing, target_demould_time
             )
             if result:
                 chart_buf = generate_pie_chart(result)
@@ -585,7 +773,12 @@ else:
                         'sg_ca': sg_ca,
                         'unit_weight_ca': unit_weight_ca,
                         'moist_fa': moist_fa,
-                        'moist_ca': moist_ca
+                        'moist_ca': moist_ca,
+                        'construction_type': construction_type,
+                        'production_method': production_method,
+                        'early_strength_required': early_strength_required,
+                        'steam_curing': steam_curing,
+                        'target_demould_time': target_demould_time
                     }
                 })
                 st.success("New mix design calculated!")
@@ -601,13 +794,28 @@ else:
 if st.session_state.mix_designs:
     st.subheader(f"📚 Accumulated Designs ({len(st.session_state.mix_designs)})")
     
+    # Display industrialized recommendations
+    latest_design = st.session_state.mix_designs[-1]
+    industrialized_factors = latest_design['data']['Industrialized Factors']
+    
+    st.info(f"""
+    **🏭 Industrialized Construction Recommendations:**
+    - **Recommended Admixtures:** {', '.join(industrialized_factors['recommended_admixtures']) or 'Standard mix'}
+    - **Curing Method:** {industrialized_factors['curing_method']}
+    - **Target Demould Strength:** {industrialized_factors['demould_strength']} MPa
+    - **Construction Type:** {latest_design['data']['Construction Type']}
+    - **Production Quality:** {PRODUCTION_METHODS[latest_design['inputs']['production_method']]['quality_control']}
+    """)
+    
     for i, design in enumerate(st.session_state.mix_designs, 1):
-        with st.expander(f"Design #{i} - {design['data']['Target Mean Strength']} MPa (Click to View)", expanded=(i==len(st.session_state.mix_designs))):
+        with st.expander(f"Design #{i} - {design['data']['Target Mean Strength']} MPa ({design['data']['Construction Type']})", expanded=(i==len(st.session_state.mix_designs))):
             col1, col2 = st.columns([2, 1])
             
             with col1:
+                # Filter out industrialized factors from display
+                display_data = {k: v for k, v in design['data'].items() if k not in ['Industrialized Factors', 'Construction Type', 'Production Method', 'Demould Strength']}
                 st.dataframe(
-                    pd.DataFrame.from_dict(design['data'], orient='index', columns=['Value']),
+                    pd.DataFrame.from_dict(display_data, orient='index', columns=['Value']),
                     height=300,
                     use_container_width=True
                 )
@@ -618,14 +826,14 @@ if st.session_state.mix_designs:
                     design['chart'].seek(0)
                     st.image(design['chart'], width=300)  # Fixed width for better visibility
             
-            st.caption(f"Calculated at {design['timestamp']}")
+            st.caption(f"Calculated at {design['timestamp']} | Construction Type: {design['data']['Construction Type']}")
 
     # Master PDF and Clear options
     st.markdown("---")
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("📄 Generate Master PDF", key="generate_pdf"):
+        if st.button("📄 Generate Master PDF Report", key="generate_pdf"):
             with st.spinner(f"Compiling {len(st.session_state.mix_designs)} designs..."):
                 pdf_bytes = create_pdf_report_multiple(
                     st.session_state.mix_designs,
@@ -633,9 +841,9 @@ if st.session_state.mix_designs:
                 )
                 if pdf_bytes:
                     st.download_button(
-                        "💾 Download Full Report",
+                        "💾 Download Full Industrialized Report",
                         pdf_bytes,
-                        f"concrete_mix_designs_{project_name}.pdf",
+                        f"industrialized_concrete_mix_designs_{project_name}.pdf",
                         "application/pdf",
                         key="download_pdf"
                     )

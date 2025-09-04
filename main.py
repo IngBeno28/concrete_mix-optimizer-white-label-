@@ -1,4 +1,22 @@
-# --- [Previous imports and configurations remain unchanged] ---
+# --- Imports ---
+import io
+import tempfile
+import os
+from datetime import datetime
+from fpdf import FPDF
+from PIL import Image
+import pandas as pd
+import matplotlib.pyplot as plt
+import streamlit as st
+from typing import List, Dict, Optional
+from branding import CLIENT_NAME, APP_TITLE, PRIMARY_COLOR, LOGO_PATH, FOOTER_NOTE, LOGO_CONFIG, LOGO_ALT_TEXT
+
+# --- Streamlit Config ---
+st.set_page_config(
+    page_title=APP_TITLE,
+    page_icon="🏗️",
+    layout="wide"
+)
 
 # --- Main Application Logic ---
 if not st.session_state.show_new_design:

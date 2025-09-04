@@ -52,12 +52,10 @@ if 'default_params' not in st.session_state:
 try:
     with open("style.css") as f:
         css_content = f.read()
-        # Inject primary color variable into CSS
         css_content = f":root {{ --primary: {PRIMARY_COLOR}; }}\n" + css_content
         st.markdown(f"<style>{css_content}</style>", unsafe_allow_html=True)
 except FileNotFoundError:
     st.warning("Custom stylesheet not found. Using default styles.")
-    # Fallback basic styling
     st.markdown(f"""
     <style>
         :root {{
@@ -441,7 +439,6 @@ def calculate_mix(
 def generate_pie_chart(data):
     """Generate pie chart of material composition with improved styling"""
     try:
-        # Filter relevant components
         material_components = {
             k: v for k, v in data.items() 
             if k in ["Water", "Cement", "Fine Aggregate", "Coarse Aggregate"] and v > 0
@@ -450,13 +447,10 @@ def generate_pie_chart(data):
         if not material_components:
             return None
             
-        # Create figure with better styling
         plt.style.use('default')
         fig, ax = plt.subplots(figsize=(8, 8))
         
-        # Define colors for each material
-        colors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0']  # Green, Blue, Orange, Purple
-        
+        colors = ['#2196F3', '#FF9800', '#4CAF50', '#F44336']  # Blue, Orange, Green, Red
         wedges, texts, autotexts = ax.pie(
             material_components.values(),
             labels=material_components.keys(),
@@ -467,11 +461,9 @@ def generate_pie_chart(data):
             wedgeprops={'edgecolor': 'black', 'linewidth': 1}
         )
         
-        # Style the chart
         ax.axis('equal')
         ax.set_title('Mix Composition', fontsize=16, pad=20, color='white', fontweight='bold')
         
-        # Style the text elements
         for autotext in autotexts:
             autotext.set_color('white')
             autotext.set_fontweight('bold')
@@ -481,21 +473,11 @@ def generate_pie_chart(data):
             text.set_color('white')
             text.set_fontsize(12)
         
-        # Set background color to match app theme
         fig.patch.set_facecolor('#121212')
         ax.set_facecolor('#1E1E1E')
         
-        # Save to buffer with higher DPI and transparent background
         buf = io.BytesIO()
-        plt.savefig(
-            buf, 
-            format='png', 
-            dpi=150, 
-            bbox_inches='tight',
-            facecolor=fig.get_facecolor(),
-            edgecolor='none',
-            transparent=False
-        )
+        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none', transparent=False)
         buf.seek(0)
         plt.close(fig)
         return buf
@@ -504,13 +486,55 @@ def generate_pie_chart(data):
         st.error(f"Chart generation error: {str(e)}")
         return None
 
+def generate_bar_chart(data):
+    """Generate bar chart of material composition with improved styling"""
+    try:
+        material_components = {
+            k: v for k, v in data.items() 
+            if k in ["Water", "Cement", "Fine Aggregate", "Coarse Aggregate"] and v > 0
+        }
+        
+        if not material_components:
+            return None
+            
+        plt.style.use('default')
+        fig, ax = plt.subplots(figsize=(8, 6))
+        
+        colors = ['#2196F3', '#FF9800', '#4CAF50', '#F44336']  # Blue, Orange, Green, Red
+        bars = ax.bar(material_components.keys(), material_components.values(), color=colors[:len(material_components)])
+        
+        ax.set_title('Mix Composition', fontsize=16, pad=20, color='white', fontweight='bold')
+        ax.set_ylabel('Quantity (kg/m³)', fontsize=12, color='white')
+        ax.set_facecolor('#1E1E1E')
+        fig.patch.set_facecolor('#121212')
+        
+        # Add value labels on top of bars
+        for bar in bars:
+            height = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{height:.1f}',
+                    ha='center', va='bottom', fontsize=10, color='white', fontweight='bold')
+        
+        # Customize ticks
+        ax.tick_params(axis='x', colors='white', labelsize=12)
+        ax.tick_params(axis='y', colors='white', labelsize=12)
+        
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none', transparent=False)
+        buf.seek(0)
+        plt.close(fig)
+        return buf
+        
+    except Exception as e:
+        st.error(f"Bar chart generation error: {str(e)}")
+        return None
+
 def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
     """Generate a comprehensive PDF report with all mix designs including parameter tables"""
     try:
         pdf = FPDF()
         pdf.set_auto_page_break(auto=True, margin=15)
         
-        # Helper function to safely encode text
         def safe_text(text):
             if not isinstance(text, str):
                 text = str(text)
@@ -528,7 +552,7 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
                     img.save(temp_logo_path, format='JPEG', quality=95)
                     pdf.image(temp_logo_path, x=(pdf.w - 40)/2, y=30, w=40)
                     os.unlink(temp_logo_path)
-                pdf.ln(50)
+                pdf.ln(80)  # Increased space between logo and title
             except Exception as e:
                 st.error(f"Logo processing error: {str(e)}")
 
@@ -546,7 +570,6 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
         for i, design in enumerate(designs, 1):
             pdf.add_page()
             
-            # Design header
             pdf.set_font("Arial", 'B', 16)
             pdf.cell(0, 10, safe_text(f"Design #{i}"), 0, 1, 'C')
             pdf.set_font("Arial", '', 12)
@@ -555,7 +578,6 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
             pdf.cell(0, 8, safe_text(f"Calculated: {design['timestamp']}"), 0, 1, 'C')
             pdf.ln(10)
 
-            # --- Results Table ---
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(0, 10, safe_text("Mix Design Results"), 0, 1, 'C')
             
@@ -583,7 +605,6 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
                     }.get(param, "-")), 1, 0, 'C')
                     pdf.ln(8)
 
-            # --- Industrialized Construction Recommendations ---
             pdf.ln(10)
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(0, 10, safe_text("Industrialized Construction Recommendations"), 0, 1, 'C')
@@ -596,11 +617,9 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
             pdf.multi_cell(0, 8, safe_text(f"Production Method: {design['data']['Production Method']}"))
             pdf.ln(5)
 
-            # --- Design Parameters Table ---
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(0, 10, safe_text("Design Parameters"), 0, 1, 'C')
             
-            # Prepare parameter data
             params = design['inputs']
             parameter_data = [
                 ["Material Properties", "", ""],
@@ -631,14 +650,11 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
                 [f"Target Demould Time", f"{params['target_demould_time']} hours", ""]
             ]
 
-            # Create parameter table
             param_col_widths = [70, 50, 30]
             pdf.set_font("Arial", '', 10)
             
             for row in parameter_data:
                 pdf.set_x((pdf.w - sum(param_col_widths))/2)
-                
-                # Style headers differently
                 if row[0] in ["Material Properties", "Mix Parameters", "Industrialized Parameters"]:
                     pdf.set_font("Arial", 'B', 10)
                     pdf.cell(sum(param_col_widths), 8, safe_text(row[0]), 1, 1, 'C')
@@ -649,29 +665,22 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
                     pdf.cell(param_col_widths[2], 8, safe_text(row[2]), 1)
                     pdf.ln(8)
 
-            # Add chart if available
             if design.get('chart'):
                 try:
-                    # Save chart to temporary file with proper handling
                     with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
-                        # Open the image and convert to RGB if necessary
                         img = Image.open(design['chart'])
                         if img.mode != 'RGB':
                             img = img.convert('RGB')
                         img.save(tmp.name, format='PNG', quality=95)
-                        
-                        # Add chart to PDF with proper positioning
                         y_position = pdf.get_y() + 5
-                        if y_position > 200:  # If we're too far down the page, add a new page
+                        if y_position > 200:
                             pdf.add_page()
                             y_position = 20
-                        
                         pdf.image(tmp.name, x=(pdf.w - 80)/2, y=y_position, w=80)
                         os.unlink(tmp.name)
                 except Exception as e:
                     st.error(f"Chart rendering error: {str(e)}")
 
-        # Generate final PDF
         return pdf.output(dest='S').encode('latin-1', errors='replace')
             
     except Exception as e:
@@ -864,38 +873,41 @@ else:
     st.subheader("📊 Current Mix Design Results")
     
     # Display results in columns
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.markdown("**Mix Proportions (per m³)**")
+        st.markdown("**Mix Proportions:**")
         results_data = {
-            "Target Mean Strength": f"{current_design['data']['Target Mean Strength']} MPa",
-            "Water": f"{current_design['data']['Water']} kg",
-            "Cement": f"{current_design['data']['Cement']} kg",
-            "Fine Aggregate": f"{current_design['data']['Fine Aggregate']} kg",
-            "Coarse Aggregate": f"{current_design['data']['Coarse Aggregate']} kg",
-            "Air Content": f"{current_design['data']['Air Content']}%",
-            "Admixture": f"{current_design['data']['Admixture']} kg"
+            "Target Mean Strength ft (MPa)": f"{current_design['data']['Target Mean Strength']}",
+            "Water (kg/m³)": f"{current_design['data']['Water']}",
+            "Cement (kg/m³)": f"{current_design['data']['Cement']}",
+            "Fine Aggregate (kg/m³)": f"{current_design['data']['Fine Aggregate']}",
+            "Coarse Aggregate (kg/m³)": f"{current_design['data']['Coarse Aggregate']}",
+            "Air Content (%)": f"{current_design['data']['Air Content']}",
+            "Admixture (kg/m³)": f"{current_design['data']['Admixture']}"
         }
         
+        # Create a table-like display
         for param, value in results_data.items():
-            st.markdown(f"**{param}:** {value}")
-        
-        # Industrialized recommendations
-        st.markdown("**🏭 Industrialized Recommendations**")
-        factors = current_design['data']['Industrialized Factors']
-        st.markdown(f"- **Recommended Admixtures:** {', '.join(factors['recommended_admixtures']) or 'Standard mix'}")
-        st.markdown(f"- **Curing Method:** {factors['curing_method']}")
-        st.markdown(f"- **Target Demould Strength:** {factors['demould_strength']} MPa")
-        st.markdown(f"- **Production Method:** {current_design['data']['Production Method']}")
-    
+            st.markdown(f"{param} | {value}")
+
     with col2:
-        if current_design['chart']:
+        # Chart type selection
+        chart_type = st.radio("Chart Type", ["Pie", "Bar"], index=0, key="chart_type_radio")
+        
+        if chart_type == "Pie" and current_design['chart']:
             try:
-                st.image(current_design['chart'], caption="Mix Composition", use_container_width=True)
+                st.image(current_design['chart'], caption="Mix Composition", use_column_width=True)
             except Exception as e:
-                st.error(f"Error displaying chart: {str(e)}")
-    
+                st.error(f"Error displaying pie chart: {str(e)}")
+        elif chart_type == "Bar":
+            bar_chart_buf = generate_bar_chart(current_design['data'])
+            if bar_chart_buf:
+                try:
+                    st.image(bar_chart_buf, caption="Mix Composition", use_column_width=True)
+                except Exception as e:
+                    st.error(f"Error displaying bar chart: {str(e)}")
+
     # Action buttons
     col1, col2, col3 = st.columns([1, 1, 2])
     
@@ -908,7 +920,7 @@ else:
                 early_strength_required, steam_curing, target_demould_time
             )
             if result:
-                chart_buf = generate_pie_chart(result)
+                chart_buf = generate_pie_chart(result) if chart_type == "Pie" else generate_bar_chart(result)
                 st.session_state.mix_designs[-1] = {
                     'data': result,
                     'chart': chart_buf,

@@ -8,6 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
 from typing import List, Dict, Optional
+# Assuming 'branding.py' exists with these variables; adjust if needed
 from branding import CLIENT_NAME, APP_TITLE, PRIMARY_COLOR, LOGO_PATH, FOOTER_NOTE, LOGO_CONFIG, LOGO_ALT_TEXT
 
 # --- Streamlit Config ---
@@ -17,13 +18,13 @@ st.set_page_config(
     layout="wide"
 )
 
-# Initialize session state
+# Initialize session state keys if not present
 if 'mix_designs' not in st.session_state:
-    st.session_state.mix_designs = []
+    st.session_state['mix_designs'] = []
 if 'show_new_design' not in st.session_state:
-    st.session_state.show_new_design = False
+    st.session_state['show_new_design'] = False
 if 'default_params' not in st.session_state:
-    st.session_state.default_params = {
+    st.session_state['default_params'] = {
         'fck': 25.0,
         'std_dev': 5.0,
         'exposure': 'Moderate',
@@ -188,10 +189,10 @@ st.markdown("**Project Name**")
 project_name = st.text_input("", "Unnamed Project", key="project_name_input")
 
 # Get current parameters
-if st.session_state.show_new_design and st.session_state.mix_designs:
-    current_params = st.session_state.mix_designs[-1]['inputs']
+if st.session_state['show_new_design'] and st.session_state['mix_designs']:
+    current_params = st.session_state['mix_designs'][-1]['inputs']
 else:
-    current_params = st.session_state.default_params
+    current_params = st.session_state['default_params']
 
 with st.expander("🏭 Industrialized Construction Parameters", expanded=True):
     col1, col2 = st.columns(2)
@@ -685,7 +686,7 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
         return None
 
 # --- Main Application Logic ---
-if not st.session_state.show_new_design:
+if not st.session_state['show_new_design']:
     if st.button("🧪 Compute Industrialized Mix Design", key="compute_mix_button"):
         result = calculate_mix(
             fck, std_dev, exposure, max_agg_size, slump, air_entrained,
@@ -695,7 +696,7 @@ if not st.session_state.show_new_design:
         )
         if result:
             chart_buf = generate_pie_chart(result)
-            st.session_state.mix_designs.append({
+            st.session_state['mix_designs'].append({
                 'data': result,
                 'chart': chart_buf,
                 'timestamp': datetime.now().strftime("%H:%M:%S"),
@@ -724,7 +725,7 @@ if not st.session_state.show_new_design:
                 }
             })
             st.success("Industrialized mix design calculated and saved!")
-            st.session_state.show_new_design = True
+            st.session_state['show_new_design'] = True
             st.rerun()
 else:
     # Display current parameters with option to modify
@@ -734,38 +735,38 @@ else:
         with col1:
             st.markdown("**f'c (MPa)**")
             fck = st.number_input("", 10.0, 80.0, 
-                                st.session_state.mix_designs[-1]['inputs']['fck'],
+                                st.session_state['mix_designs'][-1]['inputs']['fck'],
                                 key="mod_fck")
             
             st.markdown("**Standard deviation (MPa)**")
             std_dev = st.number_input("", 3.0, 10.0, 
-                                    st.session_state.mix_designs[-1]['inputs']['std_dev'],
+                                    st.session_state['mix_designs'][-1]['inputs']['std_dev'],
                                     key="mod_std_dev")
             
             st.markdown("**Exposure Class**")
             exposure = st.selectbox("", list(ACI_EXPOSURE), 
-                                  index=list(ACI_EXPOSURE).index(st.session_state.mix_designs[-1]['inputs']['exposure']),
+                                  index=list(ACI_EXPOSURE).index(st.session_state['mix_designs'][-1]['inputs']['exposure']),
                                   key="mod_exposure")
 
         with col2:
             st.markdown("**Max Aggregate Size (mm)**")
             max_agg_size = st.selectbox("", [10, 20, 40], 
-                                      index=[10, 20, 40].index(st.session_state.mix_designs[-1]['inputs']['max_agg_size']),
+                                      index=[10, 20, 40].index(st.session_state['mix_designs'][-1]['inputs']['max_agg_size']),
                                       key="mod_max_agg_size")
             
             st.markdown("**Slump (mm)**")
             slump = st.slider("", 25, 200, 
-                            st.session_state.mix_designs[-1]['inputs']['slump'],
+                            st.session_state['mix_designs'][-1]['inputs']['slump'],
                             key="mod_slump")
             
             st.markdown("**Air Entrained**")
             air_entrained = st.checkbox("", 
-                                      st.session_state.mix_designs[-1]['inputs']['air_entrained'],
+                                      st.session_state['mix_designs'][-1]['inputs']['air_entrained'],
                                       key="mod_air_entrained")
             if air_entrained:
                 st.markdown("**Target Air Content (%)**")
                 air_content = st.slider("", 1.0, 8.0, 
-                                      st.session_state.mix_designs[-1]['inputs']['air_content'],
+                                      st.session_state['mix_designs'][-1]['inputs']['air_content'],
                                       key="mod_air_content")
             else:
                 air_content = 0.0
@@ -773,17 +774,17 @@ else:
         with col3:
             st.markdown("**w/c Ratio**")
             wcm = st.number_input("", 0.3, 0.7, 
-                                st.session_state.mix_designs[-1]['inputs']['wcm'],
+                                st.session_state['mix_designs'][-1]['inputs']['wcm'],
                                 key="mod_wcm")
             
             st.markdown("**Admixture (%)**")
             admixture = st.number_input("", 0.0, 5.0, 
-                                      st.session_state.mix_designs[-1]['inputs']['admixture'],
+                                      st.session_state['mix_designs'][-1]['inputs']['admixture'],
                                       key="mod_admixture")
             
             st.markdown("**FA Fineness Modulus**")
             fm = st.slider("", 2.4, 3.0, 
-                          st.session_state.mix_designs[-1]['inputs']['fm'], 
+                          st.session_state['mix_designs'][-1]['inputs']['fm'], 
                           step=0.1,
                           key="mod_fm")
 
@@ -791,32 +792,32 @@ else:
     with st.expander("🔬 Material Properties (Click to Modify)"):
         st.markdown("**Cement SG**")
         sg_cement = st.number_input("", 2.0, 3.5, 
-                                  st.session_state.mix_designs[-1]['inputs']['sg_cement'],
+                                  st.session_state['mix_designs'][-1]['inputs']['sg_cement'],
                                   key="mod_sg_cement")
         
         st.markdown("**Fine Aggregate SG**")
         sg_fa = st.number_input("", 2.4, 2.8, 
-                              st.session_state.mix_designs[-1]['inputs']['sg_fa'],
+                              st.session_state['mix_designs'][-1]['inputs']['sg_fa'],
                               key="mod_sg_fa")
         
         st.markdown("**Coarse Aggregate SG**")
         sg_ca = st.number_input("", 2.4, 2.8, 
-                              st.session_state.mix_designs[-1]['inputs']['sg_ca'],
+                              st.session_state['mix_designs'][-1]['inputs']['sg_ca'],
                               key="mod_sg_ca")
         
         st.markdown("**CA Unit Weight (kg/m³)**")
         unit_weight_ca = st.number_input("", 1400, 1800, 
-                                       st.session_state.mix_designs[-1]['inputs']['unit_weight_ca'],
+                                       st.session_state['mix_designs'][-1]['inputs']['unit_weight_ca'],
                                        key="mod_unit_weight_ca")
         
         st.markdown("**FA Moisture (%)**")
         moist_fa = st.number_input("", 0.0, 10.0, 
-                                 st.session_state.mix_designs[-1]['inputs']['moist_fa'],
+                                 st.session_state['mix_designs'][-1]['inputs']['moist_fa'],
                                  key="mod_moist_fa")
         
         st.markdown("**CA Moisture (%)**")
         moist_ca = st.number_input("", 0.0, 10.0, 
-                                 st.session_state.mix_designs[-1]['inputs']['moist_ca'],
+                                 st.session_state['mix_designs'][-1]['inputs']['moist_ca'],
                                  key="mod_moist_ca")
 
     # Industrialized Construction Parameters (collapsed by default)
@@ -828,7 +829,7 @@ else:
             construction_type = st.selectbox(
                 "", 
                 list(CONSTRUCTION_TYPES.keys()),
-                index=list(CONSTRUCTION_TYPES.keys()).index(st.session_state.mix_designs[-1]['inputs']['construction_type']),
+                index=list(CONSTRUCTION_TYPES.keys()).index(st.session_state['mix_designs'][-1]['inputs']['construction_type']),
                 key="mod_construction_type"
             )
             
@@ -836,7 +837,7 @@ else:
             production_method = st.selectbox(
                 "", 
                 list(PRODUCTION_METHODS.keys()),
-                index=list(PRODUCTION_METHODS.keys()).index(st.session_state.mix_designs[-1]['inputs']['production_method']),
+                index=list(PRODUCTION_METHODS.keys()).index(st.session_state['mix_designs'][-1]['inputs']['production_method']),
                 key="mod_production_method"
             )
         
@@ -844,14 +845,14 @@ else:
             st.markdown("**Early Strength Required**")
             early_strength_required = st.checkbox(
                 "", 
-                st.session_state.mix_designs[-1]['inputs']['early_strength_required'],
+                st.session_state['mix_designs'][-1]['inputs']['early_strength_required'],
                 key="mod_early_strength_required"
             )
             
             st.markdown("**Steam Curing**")
             steam_curing = st.checkbox(
                 "", 
-                st.session_state.mix_designs[-1]['inputs']['steam_curing'],
+                st.session_state['mix_designs'][-1]['inputs']['steam_curing'],
                 key="mod_steam_curing"
             )
             
@@ -859,12 +860,12 @@ else:
             target_demould_time = st.slider(
                 "", 
                 4, 48, 
-                st.session_state.mix_designs[-1]['inputs']['target_demould_time'],
+                st.session_state['mix_designs'][-1]['inputs']['target_demould_time'],
                 key="mod_target_demould_time"
             )
 
     # Display current mix design results
-    current_design = st.session_state.mix_designs[-1]
+    current_design = st.session_state['mix_designs'][-1]
     
     st.markdown("---")
     st.subheader("📊 Current Mix Design Results")
@@ -918,7 +919,7 @@ else:
             )
             if result:
                 chart_buf = generate_pie_chart(result) if chart_type == "Pie" else generate_bar_chart(result)
-                st.session_state.mix_designs[-1] = {
+                st.session_state['mix_designs'][-1] = {
                     'data': result,
                     'chart': chart_buf,
                     'timestamp': datetime.now().strftime("%H:%M:%S"),
@@ -951,13 +952,13 @@ else:
     
     with col2:
         if st.button("➕ Create New Design"):
-            st.session_state.show_new_design = False
+            st.session_state['show_new_design'] = False
             st.rerun()
     
     with col3:
         if st.button("📄 Generate PDF Report"):
-            if st.session_state.mix_designs:
-                pdf_data = create_pdf_report_multiple(st.session_state.mix_designs, project_name)
+            if st.session_state['mix_designs']:
+                pdf_data = create_pdf_report_multiple(st.session_state['mix_designs'], project_name)
                 if pdf_data:
                     st.download_button(
                         label="⬇️ Download PDF Report",
@@ -969,11 +970,11 @@ else:
                 st.warning("No mix designs to generate report")
 
 # --- Display saved designs ---
-if len(st.session_state.mix_designs) > 0:
+if len(st.session_state['mix_designs']) > 0:
     st.markdown("---")
     st.subheader("📋 Saved Mix Designs")
     
-    for i, design in enumerate(st.session_state.mix_designs):
+    for i, design in enumerate(st.session_state['mix_designs']):
         with st.expander(f"Design #{i+1} - {design['timestamp']} - {design['data']['Construction Type']}"):
             col1, col2 = st.columns([2, 1])
             

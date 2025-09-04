@@ -458,7 +458,7 @@ def generate_pie_chart(data):
             return None
             
         plt.style.use('default')
-        fig, ax = plt.subplots(figsize=(12, 12))  # Increased size for better visibility
+        fig, ax = plt.subplots(figsize=(15, 15))  # Increased size for better visibility
         
         colors = ['#2196F3', '#FF9800', '#4CAF50', '#F44336']  # Blue, Orange, Green, Red
         wedges, texts, autotexts = ax.pie(
@@ -490,7 +490,7 @@ def generate_pie_chart(data):
         plt.savefig(buf, format='png', dpi=200, bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none', transparent=False)
         buf.seek(0)
         plt.close(fig)
-        st.write(f"Debug: Chart size set to {12}x{12} inches, DPI 200")  # Debug output
+        st.write(f"Debug: Chart size set to {15}x{15} inches, DPI 200")  # Debug output
         return buf
         
     except Exception as e:
@@ -912,14 +912,14 @@ else:
         
         if chart_type == "Pie" and current_design['chart']:
             try:
-                st.image(current_design['chart'], caption="Mix Composition", use_column_width=False, width=400)
+                st.image(current_design['chart'], caption="Mix Composition", use_container_width=True)
             except Exception as e:
                 st.error(f"Error displaying pie chart: {str(e)}")
         elif chart_type == "Bar":
             bar_chart_buf = generate_bar_chart(current_design['data'])
             if bar_chart_buf:
                 try:
-                    st.image(bar_chart_buf, caption="Mix Composition", use_column_width=False, width=400)
+                    st.image(bar_chart_buf, caption="Mix Composition", use_container_width=True)
                 except Exception as e:
                     st.error(f"Error displaying bar chart: {str(e)}")
 

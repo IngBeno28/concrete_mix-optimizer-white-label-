@@ -78,15 +78,16 @@ except FileNotFoundError:
         h1, h2, h3 {{
             color: var(--primary) !important;
         }}
-        /* Ensure tables are visible */
-        .stTable {{
+        /* Ensure tables are visible and styled */
+        .stDataFrame {{
             color: var(--white) !important;
             background-color: var(--black-light) !important;
             border: 1px solid var(--gray) !important;
         }}
-        .stTable td, .stTable th {{
+        .stDataFrame td, .stDataFrame th {{
             border: 1px solid var(--gray) !important;
             padding: 5px !important;
+            font-weight: bold !important; /* Apply bold to all cells */
         }}
     </style>
     """, unsafe_allow_html=True)
@@ -457,7 +458,7 @@ def generate_pie_chart(data):
             return None
             
         plt.style.use('default')
-        fig, ax = plt.subplots(figsize=(12, 12))  # Increased size further for better visibility
+        fig, ax = plt.subplots(figsize=(12, 12))  # Increased size for better visibility
         
         colors = ['#2196F3', '#FF9800', '#4CAF50', '#F44336']  # Blue, Orange, Green, Red
         wedges, texts, autotexts = ax.pie(
@@ -900,7 +901,10 @@ else:
         if not all(results_data["Parameter"]) or not all(results_data["Value"]):
             st.error("Error: Table data is empty or invalid. Please check the mix design calculation.")
         else:
-            st.table(results_data)
+            # Convert to DataFrame and apply bold styling
+            df = pd.DataFrame(results_data)
+            styled_df = df.style.set_properties(**{'font-weight': 'bold', 'text-align': 'center'})
+            st.dataframe(styled_df, use_container_width=True)
 
     with col2:
         # Chart type selection
@@ -908,14 +912,14 @@ else:
         
         if chart_type == "Pie" and current_design['chart']:
             try:
-                st.image(current_design['chart'], caption="Mix Composition", use_column_width=False, width=400)  # Fixed width to preserve size
+                st.image(current_design['chart'], caption="Mix Composition", use_column_width=False, width=400)
             except Exception as e:
                 st.error(f"Error displaying pie chart: {str(e)}")
         elif chart_type == "Bar":
             bar_chart_buf = generate_bar_chart(current_design['data'])
             if bar_chart_buf:
                 try:
-                    st.image(bar_chart_buf, caption="Mix Composition", use_column_width=False, width=400)  # Fixed width
+                    st.image(bar_chart_buf, caption="Mix Composition", use_column_width=False, width=400)
                 except Exception as e:
                     st.error(f"Error displaying bar chart: {str(e)}")
 

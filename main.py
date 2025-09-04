@@ -187,7 +187,8 @@ ACI_EXPOSURE = {
 }
 
 # --- Industrialized Construction Inputs ---
-project_name = st.text_input("📌 Project Name", "Unnamed Project")
+st.markdown("**Project Name**")
+project_name = st.text_input("", "Unnamed Project", key="project_name_input")
 
 # Get current parameters
 if st.session_state.show_new_design and st.session_state.mix_designs:
@@ -199,32 +200,42 @@ with st.expander("🏭 Industrialized Construction Parameters", expanded=True):
     col1, col2 = st.columns(2)
     
     with col1:
+        st.markdown("**Construction Type**")
         construction_type = st.selectbox(
-            "Construction Type", 
+            "", 
             list(CONSTRUCTION_TYPES.keys()),
-            index=list(CONSTRUCTION_TYPES.keys()).index(current_params['construction_type'])
+            index=list(CONSTRUCTION_TYPES.keys()).index(current_params['construction_type']),
+            key="construction_type_input"
         )
         
+        st.markdown("**Production Method**")
         production_method = st.selectbox(
-            "Production Method", 
+            "", 
             list(PRODUCTION_METHODS.keys()),
-            index=list(PRODUCTION_METHODS.keys()).index(current_params['production_method'])
+            index=list(PRODUCTION_METHODS.keys()).index(current_params['production_method']),
+            key="production_method_input"
         )
     
     with col2:
+        st.markdown("**Early Strength Required**")
         early_strength_required = st.checkbox(
-            "Early Strength Required", 
-            current_params['early_strength_required']
+            "", 
+            current_params['early_strength_required'],
+            key="early_strength_input"
         )
         
+        st.markdown("**Steam Curing**")
         steam_curing = st.checkbox(
-            "Steam Curing", 
-            current_params['steam_curing']
+            "", 
+            current_params['steam_curing'],
+            key="steam_curing_input"
         )
         
+        st.markdown("**Target Demould Time (hours)**")
         target_demould_time = st.slider(
-            "Target Demould Time (hours)", 
-            4, 48, current_params['target_demould_time']
+            "", 
+            4, 48, current_params['target_demould_time'],
+            key="demould_time_input"
         )
 
 # Display industrialized construction recommendations
@@ -241,26 +252,41 @@ with st.expander("📋 ACI Design Inputs", expanded=True):
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        fck = st.number_input("f'c (MPa)", 10.0, 80.0, current_params['fck'])
-        std_dev = st.number_input("Standard deviation (MPa)", 3.0, 10.0, current_params['std_dev'])
-        exposure = st.selectbox("Exposure Class", list(ACI_EXPOSURE), 
-                              index=list(ACI_EXPOSURE).index(current_params['exposure']))
+        st.markdown("**f'c (MPa)**")
+        fck = st.number_input("", 10.0, 80.0, current_params['fck'], key="fck_input")
+        
+        st.markdown("**Standard deviation (MPa)**")
+        std_dev = st.number_input("", 3.0, 10.0, current_params['std_dev'], key="std_dev_input")
+        
+        st.markdown("**Exposure Class**")
+        exposure = st.selectbox("", list(ACI_EXPOSURE), 
+                              index=list(ACI_EXPOSURE).index(current_params['exposure']),
+                              key="exposure_input")
 
     with col2:
-        max_agg_size = st.selectbox("Max Aggregate Size (mm)", [10, 20, 40], 
-                                  index=[10, 20, 40].index(current_params['max_agg_size']))
+        st.markdown("**Max Aggregate Size (mm)**")
+        max_agg_size = st.selectbox("", [10, 20, 40], 
+                                  index=[10, 20, 40].index(current_params['max_agg_size']),
+                                  key="max_agg_size_input")
         
         # Adjust slump based on construction type
         recommended_slump = construction_info['slump_range']
+        st.markdown("**Slump (mm)**")
         slump = st.slider(
-            "Slump (mm)", 
+            "", 
             25, 200, 
             min(max(current_params['slump'], recommended_slump[0]), recommended_slump[1]),
-            help=f"Recommended range for {construction_type}: {recommended_slump[0]}-{recommended_slump[1]} mm"
+            help=f"Recommended range for {construction_type}: {recommended_slump[0]}-{recommended_slump[1]} mm",
+            key="slump_input"
         )
         
-        air_entrained = st.checkbox("Air Entrained", current_params['air_entrained'])
-        air_content = st.slider("Target Air Content (%)", 1.0, 8.0, current_params['air_content']) if air_entrained else 0.0
+        st.markdown("**Air Entrained**")
+        air_entrained = st.checkbox("", current_params['air_entrained'], key="air_entrained_input")
+        if air_entrained:
+            st.markdown("**Target Air Content (%)**")
+            air_content = st.slider("", 1.0, 8.0, current_params['air_content'], key="air_content_input")
+        else:
+            air_content = 0.0
 
     with col3:
         # Adjust w/c ratio for industrialized construction
@@ -268,23 +294,39 @@ with st.expander("📋 ACI Design Inputs", expanded=True):
         if 'wcm_reduction' in construction_info:
             base_wcm = max(0.3, base_wcm - construction_info['wcm_reduction'])
         
+        st.markdown("**w/c Ratio**")
         wcm = st.number_input(
-            "w/c Ratio", 
+            "", 
             0.3, 0.7, 
             base_wcm,
-            help="Reduced for industrialized construction requirements" if 'wcm_reduction' in construction_info else ""
+            help="Reduced for industrialized construction requirements" if 'wcm_reduction' in construction_info else "",
+            key="wcm_input"
         )
         
-        admixture = st.number_input("Admixture (%)", 0.0, 5.0, current_params['admixture'])
-        fm = st.slider("FA Fineness Modulus", 2.4, 3.0, current_params['fm'], step=0.1)
+        st.markdown("**Admixture (%)**")
+        admixture = st.number_input("", 0.0, 5.0, current_params['admixture'], key="admixture_input")
+        
+        st.markdown("**FA Fineness Modulus**")
+        fm = st.slider("", 2.4, 3.0, current_params['fm'], step=0.1, key="fm_input")
 
 with st.expander("🔬 Material Properties"):
-    sg_cement = st.number_input("Cement SG", 2.0, 3.5, current_params['sg_cement'])
-    sg_fa = st.number_input("Fine Aggregate SG", 2.4, 2.8, current_params['sg_fa'])
-    sg_ca = st.number_input("Coarse Aggregate SG", 2.4, 2.8, current_params['sg_ca'])
-    unit_weight_ca = st.number_input("CA Unit Weight (kg/m³)", 1400, 1800, current_params['unit_weight_ca'])
-    moist_fa = st.number_input("FA Moisture (%)", 0.0, 10.0, current_params['moist_fa'])
-    moist_ca = st.number_input("CA Moisture (%)", 0.0, 10.0, current_params['moist_ca'])
+    st.markdown("**Cement SG**")
+    sg_cement = st.number_input("", 2.0, 3.5, current_params['sg_cement'], key="sg_cement_input")
+    
+    st.markdown("**Fine Aggregate SG**")
+    sg_fa = st.number_input("", 2.4, 2.8, current_params['sg_fa'], key="sg_fa_input")
+    
+    st.markdown("**Coarse Aggregate SG**")
+    sg_ca = st.number_input("", 2.4, 2.8, current_params['sg_ca'], key="sg_ca_input")
+    
+    st.markdown("**CA Unit Weight (kg/m³)**")
+    unit_weight_ca = st.number_input("", 1400, 1800, current_params['unit_weight_ca'], key="unit_weight_ca_input")
+    
+    st.markdown("**FA Moisture (%)**")
+    moist_fa = st.number_input("", 0.0, 10.0, current_params['moist_fa'], key="moist_fa_input")
+    
+    st.markdown("**CA Moisture (%)**")
+    moist_ca = st.number_input("", 0.0, 10.0, current_params['moist_ca'], key="moist_ca_input")
 
 # --- Enhanced Mix Design Logic for Industrialized Construction ---
 def calculate_mix(
@@ -684,60 +726,90 @@ else:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            fck = st.number_input("f'c (MPa)", 10.0, 80.0, 
+            st.markdown("**f'c (MPa)**")
+            fck = st.number_input("", 10.0, 80.0, 
                                 st.session_state.mix_designs[-1]['inputs']['fck'],
                                 key="mod_fck")
-            std_dev = st.number_input("Standard deviation (MPa)", 3.0, 10.0, 
+            
+            st.markdown("**Standard deviation (MPa)**")
+            std_dev = st.number_input("", 3.0, 10.0, 
                                     st.session_state.mix_designs[-1]['inputs']['std_dev'],
                                     key="mod_std_dev")
-            exposure = st.selectbox("Exposure Class", list(ACI_EXPOSURE), 
+            
+            st.markdown("**Exposure Class**")
+            exposure = st.selectbox("", list(ACI_EXPOSURE), 
                                   index=list(ACI_EXPOSURE).index(st.session_state.mix_designs[-1]['inputs']['exposure']),
                                   key="mod_exposure")
 
         with col2:
-            max_agg_size = st.selectbox("Max Aggregate Size (mm)", [10, 20, 40], 
+            st.markdown("**Max Aggregate Size (mm)**")
+            max_agg_size = st.selectbox("", [10, 20, 40], 
                                       index=[10, 20, 40].index(st.session_state.mix_designs[-1]['inputs']['max_agg_size']),
                                       key="mod_max_agg_size")
-            slump = st.slider("Slump (mm)", 25, 200, 
+            
+            st.markdown("**Slump (mm)**")
+            slump = st.slider("", 25, 200, 
                             st.session_state.mix_designs[-1]['inputs']['slump'],
                             key="mod_slump")
-            air_entrained = st.checkbox("Air Entrained", 
+            
+            st.markdown("**Air Entrained**")
+            air_entrained = st.checkbox("", 
                                       st.session_state.mix_designs[-1]['inputs']['air_entrained'],
                                       key="mod_air_entrained")
-            air_content = st.slider("Target Air Content (%)", 1.0, 8.0, 
-                                  st.session_state.mix_designs[-1]['inputs']['air_content'],
-                                  key="mod_air_content") if air_entrained else 0.0
+            if air_entrained:
+                st.markdown("**Target Air Content (%)**")
+                air_content = st.slider("", 1.0, 8.0, 
+                                      st.session_state.mix_designs[-1]['inputs']['air_content'],
+                                      key="mod_air_content")
+            else:
+                air_content = 0.0
 
         with col3:
-            wcm = st.number_input("w/c Ratio", 0.3, 0.7, 
+            st.markdown("**w/c Ratio**")
+            wcm = st.number_input("", 0.3, 0.7, 
                                 st.session_state.mix_designs[-1]['inputs']['wcm'],
                                 key="mod_wcm")
-            admixture = st.number_input("Admixture (%)", 0.0, 5.0, 
+            
+            st.markdown("**Admixture (%)**")
+            admixture = st.number_input("", 0.0, 5.0, 
                                       st.session_state.mix_designs[-1]['inputs']['admixture'],
                                       key="mod_admixture")
-            fm = st.slider("FA Fineness Modulus", 2.4, 3.0, 
+            
+            st.markdown("**FA Fineness Modulus**")
+            fm = st.slider("", 2.4, 3.0, 
                           st.session_state.mix_designs[-1]['inputs']['fm'], 
                           step=0.1,
                           key="mod_fm")
 
     # Material Properties (collapsed by default)
     with st.expander("🔬 Material Properties (Click to Modify)"):
-        sg_cement = st.number_input("Cement SG", 2.0, 3.5, 
+        st.markdown("**Cement SG**")
+        sg_cement = st.number_input("", 2.0, 3.5, 
                                   st.session_state.mix_designs[-1]['inputs']['sg_cement'],
                                   key="mod_sg_cement")
-        sg_fa = st.number_input("Fine Aggregate SG", 2.4, 2.8, 
+        
+        st.markdown("**Fine Aggregate SG**")
+        sg_fa = st.number_input("", 2.4, 2.8, 
                               st.session_state.mix_designs[-1]['inputs']['sg_fa'],
                               key="mod_sg_fa")
-        sg_ca = st.number_input("Coarse Aggregate SG", 2.4, 2.8, 
+        
+        st.markdown("**Coarse Aggregate SG**")
+        sg_ca = st.number_input("", 2.4, 2.8, 
                               st.session_state.mix_designs[-1]['inputs']['sg_ca'],
                               key="mod_sg_ca")
-        unit_weight_ca = st.number_input("CA Unit Weight (kg/m³)", 1400, 1800, 
+        
+        st.markdown("**CA Unit Weight (kg/m³)**")
+        unit_weight_ca = st.number_input("", 1400, 1800, 
                                        st.session_state.mix_designs[-1]['inputs']['unit_weight_ca'],
                                        key="mod_unit_weight_ca")
-        moist_fa = st.number_input("FA Moisture (%)", 0.0, 10.0, 
+        
+        st.markdown("**FA Moisture (%)**")
+        moist_fa = st.number_input("", 0.0, 10.0, 
                                  st.session_state.mix_designs[-1]['inputs']['moist_fa'],
                                  key="mod_moist_fa")
-        moist_ca = st.number_input("CA Moisture (%)", 0.0, 10.0, 
+        
+        st.markdown("**CA Moisture (%)**")
+        moist_ca = st.number_input("", 0.0, 10.0, 
                                  st.session_state.mix_designs[-1]['inputs']['moist_ca'],
                                  key="mod_moist_ca")
 
@@ -746,35 +818,40 @@ else:
         col1, col2 = st.columns(2)
         
         with col1:
+            st.markdown("**Construction Type**")
             construction_type = st.selectbox(
-                "Construction Type", 
+                "", 
                 list(CONSTRUCTION_TYPES.keys()),
                 index=list(CONSTRUCTION_TYPES.keys()).index(st.session_state.mix_designs[-1]['inputs']['construction_type']),
                 key="mod_construction_type"
             )
             
+            st.markdown("**Production Method**")
             production_method = st.selectbox(
-                "Production Method", 
+                "", 
                 list(PRODUCTION_METHODS.keys()),
                 index=list(PRODUCTION_METHODS.keys()).index(st.session_state.mix_designs[-1]['inputs']['production_method']),
                 key="mod_production_method"
             )
         
         with col2:
+            st.markdown("**Early Strength Required**")
             early_strength_required = st.checkbox(
-                "Early Strength Required", 
+                "", 
                 st.session_state.mix_designs[-1]['inputs']['early_strength_required'],
                 key="mod_early_strength_required"
             )
             
+            st.markdown("**Steam Curing**")
             steam_curing = st.checkbox(
-                "Steam Curing", 
+                "", 
                 st.session_state.mix_designs[-1]['inputs']['steam_curing'],
                 key="mod_steam_curing"
             )
             
+            st.markdown("**Target Demould Time (hours)**")
             target_demould_time = st.slider(
-                "Target Demould Time (hours)", 
+                "", 
                 4, 48, 
                 st.session_state.mix_designs[-1]['inputs']['target_demould_time'],
                 key="mod_target_demould_time"

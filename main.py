@@ -8,7 +8,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
 from typing import List, Dict, Optional
-# Assuming 'branding.py' exists with these variables; adjust if needed
 from branding import CLIENT_NAME, APP_TITLE, PRIMARY_COLOR, LOGO_PATH, FOOTER_NOTE, LOGO_CONFIG, LOGO_ALT_TEXT
 
 # --- Streamlit Config ---
@@ -78,6 +77,16 @@ except FileNotFoundError:
         }}
         h1, h2, h3 {{
             color: var(--primary) !important;
+        }}
+        /* Ensure tables are visible */
+        .stTable {{
+            color: var(--white) !important;
+            background-color: var(--black-light) !important;
+            border: 1px solid var(--gray) !important;
+        }}
+        .stTable td, .stTable th {{
+            border: 1px solid var(--gray) !important;
+            padding: 5px !important;
         }}
     </style>
     """, unsafe_allow_html=True)
@@ -448,7 +457,7 @@ def generate_pie_chart(data):
             return None
             
         plt.style.use('default')
-        fig, ax = plt.subplots(figsize=(10, 10))  # Increased size for better visibility
+        fig, ax = plt.subplots(figsize=(12, 12))  # Increased size further for better visibility
         
         colors = ['#2196F3', '#FF9800', '#4CAF50', '#F44336']  # Blue, Orange, Green, Red
         wedges, texts, autotexts = ax.pie(
@@ -477,9 +486,10 @@ def generate_pie_chart(data):
         ax.set_facecolor('#1E1E1E')
         
         buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=200, bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none', transparent=False)  # Increased DPI
+        plt.savefig(buf, format='png', dpi=200, bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none', transparent=False)
         buf.seek(0)
         plt.close(fig)
+        st.write(f"Debug: Chart size set to {12}x{12} inches, DPI 200")  # Debug output
         return buf
         
     except Exception as e:
@@ -518,7 +528,7 @@ def generate_bar_chart(data):
         ax.tick_params(axis='y', colors='white', labelsize=12)
         
         buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=200, bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none', transparent=False)  # Increased DPI
+        plt.savefig(buf, format='png', dpi=200, bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none', transparent=False)
         buf.seek(0)
         plt.close(fig)
         return buf
@@ -870,8 +880,8 @@ else:
     st.markdown("---")
     st.subheader("📊 Current Mix Design Results")
     
-    # Display results in columns
-    col1, col2 = st.columns([1, 1])
+    # Display results in columns with adjusted layout
+    col1, col2 = st.columns([1.5, 1])  # Give more space to the table column
     
     with col1:
         st.markdown("**Mix Proportions:**")
@@ -887,7 +897,10 @@ else:
                      str(current_design['data']['Air Content']),
                      str(current_design['data']['Admixture'])]
         }
-        st.table(results_data)
+        if not all(results_data["Parameter"]) or not all(results_data["Value"]):
+            st.error("Error: Table data is empty or invalid. Please check the mix design calculation.")
+        else:
+            st.table(results_data)
 
     with col2:
         # Chart type selection
@@ -895,14 +908,14 @@ else:
         
         if chart_type == "Pie" and current_design['chart']:
             try:
-                st.image(current_design['chart'], caption="Mix Composition", use_column_width=True)
+                st.image(current_design['chart'], caption="Mix Composition", use_column_width=False, width=400)  # Fixed width to preserve size
             except Exception as e:
                 st.error(f"Error displaying pie chart: {str(e)}")
         elif chart_type == "Bar":
             bar_chart_buf = generate_bar_chart(current_design['data'])
             if bar_chart_buf:
                 try:
-                    st.image(bar_chart_buf, caption="Mix Composition", use_column_width=True)
+                    st.image(bar_chart_buf, caption="Mix Composition", use_column_width=False, width=400)  # Fixed width
                 except Exception as e:
                     st.error(f"Error displaying bar chart: {str(e)}")
 

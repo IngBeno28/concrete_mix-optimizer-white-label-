@@ -908,6 +908,71 @@ if len(st.session_state.mix_designs) > 0:
                     except Exception as e:
                         st.error(f"Error displaying chart: {str(e)}")
 
+# --- Sidebar: Display Parameters with Bold Keys ---
+st.sidebar.title("⚙️ Parameter Reference")
+
+def pretty_key(key: str) -> str:
+    """Convert snake_case keys into Title Case for display"""
+    return key.replace("_", " ").title()
+
+def format_value(key, value):
+    """Format values with units for clean display in the sidebar"""
+    # Handle ranges (tuples/lists)
+    if isinstance(value, (list, tuple)):
+        return " – ".join(map(str, value))
+    # Handle booleans
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    # Handle numerics with units based on key
+    if isinstance(value, (int, float)):
+        if "slump" in key.lower():
+            return f"{value} mm"
+        elif "moist" in key.lower():
+            return f"{value} %"
+        elif "air_content" in key.lower():
+            return f"{value} %"
+        elif "unit_weight" in key.lower():
+            return f"{value} kg/m³"
+        elif "wcm" in key.lower():
+            return f"{value} (w/cm)"
+        elif "sg" in key.lower():
+            return f"{value} (SG)"
+        elif "fck" in key.lower():
+            return f"{value} MPa"
+        elif "std_dev" in key.lower():
+            return f"{value} MPa"
+        else:
+            return str(value)
+    # Default: show as string
+    return str(value)
+
+def render_dict_bold(d: dict, title: str):
+    """Render dictionary in sidebar with bold keys inside an expander"""
+    with st.sidebar.expander(title, expanded=False):
+        for key, value in d.items():
+            display_key = pretty_key(key)
+            if isinstance(value, dict):
+                st.markdown(f"**{display_key}:**")
+                for sub_key, sub_value in value.items():
+                    st.markdown(f"&nbsp;&nbsp;&nbsp; **{pretty_key(sub_key)}:** {format_value(sub_key, sub_value)}")
+            else:
+                st.markdown(f"**{display_key}:** {format_value(key, value)}")
+
+# Show Default Parameters
+render_dict_bold(st.session_state.default_params, "Default Parameters")
+
+# Show Construction Types
+render_dict_bold(CONSTRUCTION_TYPES, "Construction Types")
+
+# Show Production Methods
+render_dict_bold(PRODUCTION_METHODS, "Production Methods")
+
+# Show ACI Reference Tables
+render_dict_bold(ACI_WATER_CONTENT, "ACI Water Content")
+render_dict_bold(ACI_CA_VOLUME, "ACI Coarse Aggregate Volume")
+render_dict_bold(ACI_EXPOSURE, "ACI Exposure Classes")
+
+
 # --- Footer ---
 st.markdown("---")
 st.markdown(f"""

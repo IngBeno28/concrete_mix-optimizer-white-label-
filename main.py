@@ -882,64 +882,64 @@ else:
     st.subheader("📊 Current Mix Design Results")
     
     # Display results in columns with adjusted layout
- col1, col2 = st.columns([1.8, 1.2])
-
-with col1:
-    st.markdown("**Mix Proportions:**")
-    results_data = {
-        "Parameter": [
-            "Target Mean Strength ft (MPa)", 
-            "Water (kg/m³)", 
-            "Cement (kg/m³)", 
-            "Fine Aggregate (kg/m³)", 
-            "Coarse Aggregate (kg/m³)", 
-            "Air Content (%)", 
-            "Admixture (kg/m³)"
-        ],
-        "Value": [
-            str(current_design['data']['Target Mean Strength']),
-            str(current_design['data']['Water']),
-            str(current_design['data']['Cement']),
-            str(current_design['data']['Fine Aggregate']),
-            str(current_design['data']['Coarse Aggregate']),
-            str(current_design['data']['Air Content']),
-            str(current_design['data']['Admixture'])
-        ]
-    }
-
-    df = pd.DataFrame(results_data)
-    styled_df = df.style.set_properties(**{'font-weight': 'bold', 'text-align': 'center'})
-    st.dataframe(styled_df, use_container_width=True)
-
-with col2:
-    st.markdown("#### Chart Type")
-    chart_type = st.radio(
-        "",
-        ["Pie", "Bar"],
-        index=0,
-        key="chart_type_radio",
-        horizontal=True,
-        label_visibility="collapsed"
-    )
-
-    # Center chart display
-    st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
-
-    if chart_type == "Pie" and current_design['chart']:
-        try:
-            st.image(current_design['chart'], caption="Mix Composition", use_container_width=True)
-        except Exception as e:
-            st.error(f"Error displaying pie chart: {str(e)}")
-
-    elif chart_type == "Bar":
-        bar_chart_buf = generate_bar_chart(current_design['data'])
-        if bar_chart_buf:
+     col1, col2 = st.columns([1.8, 1.2])
+    
+    with col1:
+        st.markdown("**Mix Proportions:**")
+        results_data = {
+            "Parameter": [
+                "Target Mean Strength ft (MPa)", 
+                "Water (kg/m³)", 
+                "Cement (kg/m³)", 
+                "Fine Aggregate (kg/m³)", 
+                "Coarse Aggregate (kg/m³)", 
+                "Air Content (%)", 
+                "Admixture (kg/m³)"
+            ],
+            "Value": [
+                str(current_design['data']['Target Mean Strength']),
+                str(current_design['data']['Water']),
+                str(current_design['data']['Cement']),
+                str(current_design['data']['Fine Aggregate']),
+                str(current_design['data']['Coarse Aggregate']),
+                str(current_design['data']['Air Content']),
+                str(current_design['data']['Admixture'])
+            ]
+        }
+    
+        df = pd.DataFrame(results_data)
+        styled_df = df.style.set_properties(**{'font-weight': 'bold', 'text-align': 'center'})
+        st.dataframe(styled_df, use_container_width=True)
+    
+    with col2:
+        st.markdown("#### Chart Type")
+        chart_type = st.radio(
+            "",
+            ["Pie", "Bar"],
+            index=0,
+            key="chart_type_radio",
+            horizontal=True,
+            label_visibility="collapsed"
+        )
+    
+        # Center chart display
+        st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
+    
+        if chart_type == "Pie" and current_design['chart']:
             try:
-                st.image(bar_chart_buf, caption="Mix Composition", use_container_width=True)
+                st.image(current_design['chart'], caption="Mix Composition", use_container_width=True)
             except Exception as e:
-                st.error(f"Error displaying bar chart: {str(e)}")
-
-    st.markdown("</div>", unsafe_allow_html=True)
+                st.error(f"Error displaying pie chart: {str(e)}")
+    
+        elif chart_type == "Bar":
+            bar_chart_buf = generate_bar_chart(current_design['data'])
+            if bar_chart_buf:
+                try:
+                    st.image(bar_chart_buf, caption="Mix Composition", use_container_width=True)
+                except Exception as e:
+                    st.error(f"Error displaying bar chart: {str(e)}")
+    
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # Action buttons
     col1, col2, col3 = st.columns([1, 1, 2])

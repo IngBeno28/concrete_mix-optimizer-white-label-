@@ -346,7 +346,7 @@ def calculate_mix(
     """Calculate concrete mix design with industrialized construction considerations"""
     try:
         # Calculate target mean strength
-        ft = fck + 1.34 * std_dev
+        ft = fck + 1.64 * std_dev
         
         # Industrialized construction adjustments
         construction_info = CONSTRUCTION_TYPES[construction_type]

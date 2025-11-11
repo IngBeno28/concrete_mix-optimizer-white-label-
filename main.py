@@ -2089,4 +2089,4 @@ st.markdown(f"""
 <div style='text-align: center; color: var(--gray); font-size: 0.8rem;'>
     {FOOTER_NOTE} | {CLIENT_NAME} | Generated on {datetime.now().strftime('%Y-%m-%d')}
 </div>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=True) 

@@ -447,7 +447,7 @@ def calculate_mix(
         return None
 
 def generate_pie_chart(data):
-    """Generate pie chart of material composition with improved styling and proper sizing"""
+    """Generate pie chart of material composition with improved sizing for Streamlit"""
     try:
         material_components = {
             k: v for k, v in data.items() 
@@ -458,8 +458,8 @@ def generate_pie_chart(data):
             return None
             
         plt.style.use('default')
-        # Use a square aspect ratio with reasonable size for Streamlit
-        fig, ax = plt.subplots(figsize=(8, 8))  # Changed from 15x15 to 8x8
+        # Use a larger figure size with tight layout
+        fig, ax = plt.subplots(figsize=(10, 10))  # Increased from 8x8 to 10x10
         
         colors = ['#2196F3', '#FF9800', '#4CAF50', '#F44336']  # Blue, Orange, Green, Red
         wedges, texts, autotexts = ax.pie(
@@ -468,36 +468,38 @@ def generate_pie_chart(data):
             autopct='%1.1f%%',
             startangle=90,
             colors=colors[:len(material_components)],
-            textprops={'fontsize': 10, 'color': 'white', 'fontweight': 'bold'},
-            wedgeprops={'edgecolor': 'black', 'linewidth': 1}
+            textprops={'fontsize': 12, 'color': 'white', 'fontweight': 'bold'},  # Increased font size
+            wedgeprops={'edgecolor': 'black', 'linewidth': 1},
+            pctdistance=0.85  # Move percentages slightly inward
         )
         
         # Ensure the pie chart is perfectly circular
         ax.axis('equal')
-        ax.set_title('Mix Composition', fontsize=14, pad=20, color='white', fontweight='bold')
+        ax.set_title('Mix Composition', fontsize=16, pad=20, color='white', fontweight='bold')
         
-        # Improve text visibility
+        # Improve text visibility and size
         for autotext in autotexts:
             autotext.set_color('white')
             autotext.set_fontweight('bold')
-            autotext.set_fontsize(10)
+            autotext.set_fontsize(12)  # Increased font size
         
         for text in texts:
             text.set_color('white')
-            text.set_fontsize(10)
+            text.set_fontsize(12)  # Increased font size
             text.set_fontweight('bold')
         
         # Set background colors
         fig.patch.set_facecolor('#121212')
         ax.set_facecolor('#1E1E1E')
         
-        # Save with proper DPI and formatting
+        # Save with proper DPI and formatting - use tighter bounding box
         buf = io.BytesIO()
         plt.savefig(
             buf, 
             format='png', 
-            dpi=100,  # Reduced DPI for better sizing
-            bbox_inches='tight', 
+            dpi=150,  # Increased DPI for better quality
+            bbox_inches='tight',
+            pad_inches=0.1,  # Reduced padding
             facecolor=fig.get_facecolor(), 
             edgecolor='none', 
             transparent=False
@@ -925,24 +927,27 @@ else:
         
         if chart_type == "Pie" and current_design['chart']:
             try:
-                st.image(
-                    current_design['chart'], 
-                    caption="Mix Composition", 
-                    use_container_width=True,
-                    output_format="PNG"
-                )
+                # Add a container to ensure proper sizing
+                with st.container():
+                    st.image(
+                        current_design['chart'], 
+                        caption="Mix Composition", 
+                        use_container_width=True,
+                        output_format="PNG"
+                    )
             except Exception as e:
                 st.error(f"Error displaying pie chart: {str(e)}")
         elif chart_type == "Bar":
             bar_chart_buf = generate_bar_chart(current_design['data'])
             if bar_chart_buf:
                 try:
-                    st.image(
-                        bar_chart_buf, 
-                        caption="Mix Composition", 
-                        use_container_width=True,
-                        output_format="PNG"
-                    )
+                    with st.container():
+                        st.image(
+                            bar_chart_buf, 
+                            caption="Mix Composition", 
+                            use_container_width=True,
+                            output_format="PNG"
+                        )
                 except Exception as e:
                     st.error(f"Error displaying bar chart: {str(e)}")
 

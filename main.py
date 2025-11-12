@@ -447,7 +447,7 @@ def calculate_mix(
         return None
 
 def generate_pie_chart(data):
-    """Generate pie chart of material composition with improved sizing for Streamlit"""
+    """Generate pie chart of material composition with responsive sizing"""
     try:
         material_components = {
             k: v for k, v in data.items() 
@@ -458,48 +458,50 @@ def generate_pie_chart(data):
             return None
             
         plt.style.use('default')
-        # Use a larger figure size with tight layout
-        fig, ax = plt.subplots(figsize=(10, 10))  # Increased from 8x8 to 10x10
         
-        colors = ['#2196F3', '#FF9800', '#4CAF50', '#F44336']  # Blue, Orange, Green, Red
+        # Dynamic figure sizing based on container
+        # Use smaller size that fits better in Streamlit columns
+        fig_width = 6  # Reduced from 10 to 6 for better fit
+        fig, ax = plt.subplots(figsize=(fig_width, fig_width))  # Square aspect ratio
+        
+        colors = ['#2196F3', '#FF9800', '#4CAF50', '#F44336']
         wedges, texts, autotexts = ax.pie(
             material_components.values(),
             labels=material_components.keys(),
             autopct='%1.1f%%',
             startangle=90,
             colors=colors[:len(material_components)],
-            textprops={'fontsize': 12, 'color': 'white', 'fontweight': 'bold'},  # Increased font size
+            textprops={'fontsize': 10, 'color': 'white', 'fontweight': 'bold'},  # Slightly smaller font
             wedgeprops={'edgecolor': 'black', 'linewidth': 1},
-            pctdistance=0.85  # Move percentages slightly inward
+            pctdistance=0.85
         )
         
-        # Ensure the pie chart is perfectly circular
         ax.axis('equal')
-        ax.set_title('Mix Composition', fontsize=16, pad=20, color='white', fontweight='bold')
+        ax.set_title('Mix Composition', fontsize=14, pad=15, color='white', fontweight='bold')  # Smaller title
         
-        # Improve text visibility and size
+        # Improve text visibility
         for autotext in autotexts:
             autotext.set_color('white')
             autotext.set_fontweight('bold')
-            autotext.set_fontsize(12)  # Increased font size
+            autotext.set_fontsize(10)  # Smaller percentage text
         
         for text in texts:
             text.set_color('white')
-            text.set_fontsize(12)  # Increased font size
+            text.set_fontsize(10)  # Smaller label text
             text.set_fontweight('bold')
         
         # Set background colors
         fig.patch.set_facecolor('#121212')
         ax.set_facecolor('#1E1E1E')
         
-        # Save with proper DPI and formatting - use tighter bounding box
+        # Save with optimized settings
         buf = io.BytesIO()
         plt.savefig(
             buf, 
             format='png', 
-            dpi=150,  # Increased DPI for better quality
+            dpi=120,  # Reduced DPI for better Streamlit performance
             bbox_inches='tight',
-            pad_inches=0.1,  # Reduced padding
+            pad_inches=0.05,  # Reduced padding
             facecolor=fig.get_facecolor(), 
             edgecolor='none', 
             transparent=False
@@ -932,24 +934,11 @@ else:
                     st.image(
                         current_design['chart'], 
                         caption="Mix Composition", 
-                        use_container_width=True,
+                        use_container_width=True,  # This is key for responsive sizing
                         output_format="PNG"
                     )
             except Exception as e:
                 st.error(f"Error displaying pie chart: {str(e)}")
-        elif chart_type == "Bar":
-            bar_chart_buf = generate_bar_chart(current_design['data'])
-            if bar_chart_buf:
-                try:
-                    with st.container():
-                        st.image(
-                            bar_chart_buf, 
-                            caption="Mix Composition", 
-                            use_container_width=True,
-                            output_format="PNG"
-                        )
-                except Exception as e:
-                    st.error(f"Error displaying bar chart: {str(e)}")
 
     # Action buttons
     col1, col2, col3 = st.columns([1, 1, 2])

@@ -899,7 +899,7 @@ else:
     st.subheader("📊 Current Mix Design Results")
     
     # Display results in columns with adjusted layout
-    col1, col2 = st.columns([1.5, 1])  # Give more space to the table column
+    col1, col2 = st.columns([1.2, 1])  # Give more space to the table column
     
     with col1:
         st.markdown("**Mix Proportions:**")

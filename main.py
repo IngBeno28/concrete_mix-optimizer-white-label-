@@ -452,87 +452,6 @@ def calculate_mix(
         st.error(f"Calculation error: {str(e)}")
         return None
 
-def generate_pie_chart(data):
-    """Generate pie chart of material composition with responsive sizing"""
-    try:
-        material_components = {
-            k: v for k, v in data.items() 
-            if k in ["Water", "Cement", "Fine Aggregate", "Coarse Aggregate"] and v > 0
-        }
-        
-        if not material_components:
-            return None
-            
-        plt.style.use('default')
-        
-        # Dynamic figure sizing based on screen size
-        # Use smaller size for mobile, larger for desktop
-        screen_width = st.session_state.get('screen_width', 1200)  # Default to desktop
-        if screen_width < 768:  # Mobile
-            fig_width = 4
-            font_size = 8
-            title_size = 10
-        elif screen_width < 1024:  # Tablet
-            fig_width = 5
-            font_size = 9
-            title_size = 12
-        else:  # Desktop
-            fig_width = 6
-            font_size = 10
-            title_size = 14
-        
-        fig, ax = plt.subplots(figsize=(fig_width, fig_width))
-        
-        colors = ['#2196F3', '#FF9800', '#4CAF50', '#F44336']
-        wedges, texts, autotexts = ax.pie(
-            material_components.values(),
-            labels=material_components.keys(),
-            autopct='%1.1f%%',
-            startangle=90,
-            colors=colors[:len(material_components)],
-            textprops={'fontsize': font_size, 'color': 'white', 'fontweight': 'bold'},
-            wedgeprops={'edgecolor': 'black', 'linewidth': 1},
-            pctdistance=0.85
-        )
-        
-        ax.axis('equal')
-        ax.set_title('Mix Composition', fontsize=title_size, pad=15, color='white', fontweight='bold')
-        
-        # Improve text visibility
-        for autotext in autotexts:
-            autotext.set_color('white')
-            autotext.set_fontweight('bold')
-            autotext.set_fontsize(font_size)
-        
-        for text in texts:
-            text.set_color('white')
-            text.set_fontsize(font_size)
-            text.set_fontweight('bold')
-        
-        # Set background colors
-        fig.patch.set_facecolor('#121212')
-        ax.set_facecolor('#1E1E1E')
-        
-        # Save with optimized settings
-        buf = io.BytesIO()
-        plt.savefig(
-            buf, 
-            format='png', 
-            dpi=120,
-            bbox_inches='tight',
-            pad_inches=0.05,
-            facecolor=fig.get_facecolor(), 
-            edgecolor='none', 
-            transparent=False
-        )
-        buf.seek(0)
-        plt.close(fig)
-        return buf
-        
-    except Exception as e:
-        st.error(f"Chart generation error: {str(e)}")
-        return None
-
 def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
     """Generate a comprehensive PDF report with all mix designs including parameter tables"""
     try:
@@ -625,65 +544,70 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
             pdf.cell(0, 10, safe_text("Design Parameters"), 0, 1, 'C')
             
             params = design['inputs']
-            parameter_data = [
-                ["Material Properties", "", ""],
-                [f"Cement SG", f"{params['sg_cement']}", ""],
-                [f"Fine Aggregate SG", f"{params['sg_fa']}", ""],
-                [f"Coarse Aggregate SG", f"{params['sg_ca']}", ""],
-                [f"CA Unit Weight", f"{params['unit_weight_ca']} kg/m³", ""],
-                [f"FA Moisture", f"{params['moist_fa']}%", ""],
-                [f"CA Moisture", f"{params['moist_ca']}%", ""],
-                ["", "", ""],
-                ["Mix Parameters", "", ""],
-                [f"f'c", f"{params['fck']} MPa", ""],
-                [f"Standard Deviation", f"{params['std_dev']} MPa", ""],
-                [f"Exposure Class", f"{params['exposure']}", ""],
-                [f"Max Aggregate Size", f"{params['max_agg_size']} mm", ""],
-                [f"Slump", f"{params['slump']} mm", ""],
-                [f"Air Entrained", f"{'Yes' if params['air_entrained'] else 'No'}", ""],
-                [f"Target Air Content", f"{params['air_content']}%" if params['air_entrained'] else "N/A", ""],
-                [f"w/c Ratio", f"{params['wcm']}", ""],
-                [f"Admixture", f"{params['admixture']}%", ""],
-                [f"FA Fineness Modulus", f"{params['fm']}", ""],
-                ["", "", ""],
-                ["Industrialized Parameters", "", ""],
-                [f"Construction Type", f"{params['construction_type']}", ""],
-                [f"Production Method", f"{params['production_method']}", ""],
-                [f"Early Strength", f"{'Yes' if params['early_strength_required'] else 'No'}", ""],
-                [f"Steam Curing", f"{'Yes' if params['steam_curing'] else 'No'}", ""],
-                [f"Target Demould Time", f"{params['target_demould_time']} hours", ""]
-            ]
-
-            param_col_widths = [70, 50, 30]
+            
+            # Design Parameters Table with proper headers
+            param_col_widths = [70, 30, 30]
+            pdf.set_font("Arial", 'B', 10)
+            pdf.set_x((pdf.w - sum(param_col_widths))/2)
+            pdf.cell(param_col_widths[0], 8, safe_text("Parameter"), 1, 0, 'C')
+            pdf.cell(param_col_widths[1], 8, safe_text("Value"), 1, 0, 'C')
+            pdf.cell(param_col_widths[2], 8, safe_text("Unit"), 1, 1, 'C')
+            
             pdf.set_font("Arial", '', 10)
             
-            for row in parameter_data:
+            # Material Properties
+            material_properties = [
+                ("Cement SG", f"{params['sg_cement']}", ""),
+                ("Fine Aggregate SG", f"{params['sg_fa']}", ""),
+                ("Coarse Aggregate SG", f"{params['sg_ca']}", ""),
+                ("CA Unit Weight", f"{params['unit_weight_ca']}", "kg/m³"),
+                ("FA Moisture", f"{params['moist_fa']}", "%"),
+                ("CA Moisture", f"{params['moist_ca']}", "%")
+            ]
+            
+            for param, value, unit in material_properties:
                 pdf.set_x((pdf.w - sum(param_col_widths))/2)
-                if row[0] in ["Material Properties", "Mix Parameters", "Industrialized Parameters"]:
-                    pdf.set_font("Arial", 'B', 10)
-                    pdf.cell(sum(param_col_widths), 8, safe_text(row[0]), 1, 1, 'C')
-                    pdf.set_font("Arial", '', 10)
-                else:
-                    pdf.cell(param_col_widths[0], 8, safe_text(row[0]), 1)
-                    pdf.cell(param_col_widths[1], 8, safe_text(row[1]), 1)
-                    pdf.cell(param_col_widths[2], 8, safe_text(row[2]), 1)
-                    pdf.ln(8)
-
-            if design.get('chart'):
-                try:
-                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
-                        img = Image.open(design['chart'])
-                        if img.mode != 'RGB':
-                            img = img.convert('RGB')
-                        img.save(tmp.name, format='PNG', quality=95)
-                        y_position = pdf.get_y() + 5
-                        if y_position > 200:
-                            pdf.add_page()
-                            y_position = 20
-                        pdf.image(tmp.name, x=(pdf.w - 80)/2, y=y_position, w=80)
-                        os.unlink(tmp.name)
-                except Exception as e:
-                    st.error(f"Chart rendering error: {str(e)}")
+                pdf.cell(param_col_widths[0], 8, safe_text(param), 1)
+                pdf.cell(param_col_widths[1], 8, safe_text(value), 1, 0, 'C')
+                pdf.cell(param_col_widths[2], 8, safe_text(unit), 1, 0, 'C')
+                pdf.ln(8)
+            
+            # Mix Parameters
+            mix_parameters = [
+                ("f'c", f"{params['fck']}", "MPa"),
+                ("Standard Deviation", f"{params['std_dev']}", "MPa"),
+                ("Exposure Class", f"{params['exposure']}", ""),
+                ("Max Aggregate Size", f"{params['max_agg_size']}", "mm"),
+                ("Slump", f"{params['slump']}", "mm"),
+                ("Air Entrained", f"{'Yes' if params['air_entrained'] else 'No'}", ""),
+                ("Target Air Content", f"{params['air_content']}" if params['air_entrained'] else "N/A", "%"),
+                ("w/c Ratio", f"{params['wcm']}", ""),
+                ("Admixture", f"{params['admixture']}", "%"),
+                ("FA Fineness Modulus", f"{params['fm']}", "")
+            ]
+            
+            for param, value, unit in mix_parameters:
+                pdf.set_x((pdf.w - sum(param_col_widths))/2)
+                pdf.cell(param_col_widths[0], 8, safe_text(param), 1)
+                pdf.cell(param_col_widths[1], 8, safe_text(value), 1, 0, 'C')
+                pdf.cell(param_col_widths[2], 8, safe_text(unit), 1, 0, 'C')
+                pdf.ln(8)
+            
+            # Industrialized Parameters
+            industrialized_parameters = [
+                ("Construction Type", f"{params['construction_type']}", ""),
+                ("Production Method", f"{params['production_method']}", ""),
+                ("Early Strength Required", f"{'Yes' if params['early_strength_required'] else 'No'}", ""),
+                ("Steam Curing", f"{'Yes' if params['steam_curing'] else 'No'}", ""),
+                ("Target Demould Time", f"{params['target_demould_time']}", "hours")
+            ]
+            
+            for param, value, unit in industrialized_parameters:
+                pdf.set_x((pdf.w - sum(param_col_widths))/2)
+                pdf.cell(param_col_widths[0], 8, safe_text(param), 1)
+                pdf.cell(param_col_widths[1], 8, safe_text(value), 1, 0, 'C')
+                pdf.cell(param_col_widths[2], 8, safe_text(unit), 1, 0, 'C')
+                pdf.ln(8)
 
         return pdf.output(dest='S').encode('latin-1', errors='replace')
             
@@ -701,10 +625,8 @@ if not st.session_state['show_new_design']:
             early_strength_required, steam_curing, target_demould_time
         )
         if result:
-            chart_buf = generate_pie_chart(result)
             st.session_state['mix_designs'].append({
                 'data': result,
-                'chart': chart_buf,
                 'timestamp': datetime.now().strftime("%H:%M:%S"),
                 'inputs': {
                     'fck': fck,
@@ -876,49 +798,32 @@ else:
     st.markdown("---")
     st.subheader("📊 Current Mix Design Results")
     
-    # Responsive layout - stack on mobile, side-by-side on larger screens
-    col1, col2 = st.columns([1.2, 1])
+    # Single column layout since pie chart is removed
+    st.markdown("**Mix Proportions:**")
+    results_data = {
+        "Parameter": ["Target Mean Strength ft (MPa)", "Water (kg/m³)", "Cement (kg/m³)", 
+                     "Fine Aggregate (kg/m³)", "Coarse Aggregate (kg/m³)", "Air Content (%)", 
+                     "Admixture (kg/m³)"],
+        "Value": [str(current_design['data']['Target Mean Strength']),
+                 str(current_design['data']['Water']),
+                 str(current_design['data']['Cement']),
+                 str(current_design['data']['Fine Aggregate']),
+                 str(current_design['data']['Coarse Aggregate']),
+                 str(current_design['data']['Air Content']),
+                 str(current_design['data']['Admixture'])]
+    }
     
-    with col1:
-        st.markdown("**Mix Proportions:**")
-        results_data = {
-            "Parameter": ["Target Mean Strength ft (MPa)", "Water (kg/m³)", "Cement (kg/m³)", 
-                         "Fine Aggregate (kg/m³)", "Coarse Aggregate (kg/m³)", "Air Content (%)", 
-                         "Admixture (kg/m³)"],
-            "Value": [str(current_design['data']['Target Mean Strength']),
-                     str(current_design['data']['Water']),
-                     str(current_design['data']['Cement']),
-                     str(current_design['data']['Fine Aggregate']),
-                     str(current_design['data']['Coarse Aggregate']),
-                     str(current_design['data']['Air Content']),
-                     str(current_design['data']['Admixture'])]
-        }
-        
-        if not all(results_data["Parameter"]) or not all(results_data["Value"]):
-            st.error("Error: Table data is empty or invalid. Please check the mix design calculation.")
-        else:
-            # Convert to DataFrame with responsive settings
-            df = pd.DataFrame(results_data)
-            styled_df = df.style.set_properties(**{'font-weight': 'bold', 'text-align': 'center'})
-            st.dataframe(
-                styled_df, 
-                use_container_width=True,
-                height=min(len(results_data["Parameter"]) * 45 + 50, 400)  # Dynamic height
-            )
-
-    with col2:
-        st.markdown("**Mix Composition**")
-        if current_design['chart']:
-            try:
-                # Use container width for responsive image sizing
-                st.image(
-                    current_design['chart'], 
-                    caption="", 
-                    use_container_width=True,
-                    output_format="PNG"
-                )
-            except Exception as e:
-                st.error(f"Error displaying pie chart: {str(e)}")
+    if not all(results_data["Parameter"]) or not all(results_data["Value"]):
+        st.error("Error: Table data is empty or invalid. Please check the mix design calculation.")
+    else:
+        # Convert to DataFrame with responsive settings
+        df = pd.DataFrame(results_data)
+        styled_df = df.style.set_properties(**{'font-weight': 'bold', 'text-align': 'center'})
+        st.dataframe(
+            styled_df, 
+            use_container_width=True,
+            height=min(len(results_data["Parameter"]) * 45 + 50, 400)  # Dynamic height
+        )
 
     # Action buttons
     col1, col2, col3 = st.columns([1, 1, 2])
@@ -932,10 +837,8 @@ else:
                 early_strength_required, steam_curing, target_demould_time
             )
             if result:
-                chart_buf = generate_pie_chart(result)
                 st.session_state['mix_designs'][-1] = {
                     'data': result,
-                    'chart': chart_buf,
                     'timestamp': datetime.now().strftime("%H:%M:%S"),
                     'inputs': {
                         'fck': fck,
@@ -990,29 +893,14 @@ if len(st.session_state['mix_designs']) > 0:
     
     for i, design in enumerate(st.session_state['mix_designs']):
         with st.expander(f"Design #{i+1} - {design['timestamp']} - {design['data']['Construction Type']}"):
-            col1, col2 = st.columns([2, 1])
-            
-            with col1:
-                st.markdown(f"**Target Strength:** {design['data']['Target Mean Strength']} MPa")
-                st.markdown(f"**Construction Type:** {design['data']['Construction Type']}")
-                st.markdown(f"**Water:** {design['data']['Water']} kg/m³")
-                st.markdown(f"**Cement:** {design['data']['Cement']} kg/m³")
-                st.markdown(f"**Fine Aggregate:** {design['data']['Fine Aggregate']} kg/m³")
-                st.markdown(f"**Coarse Aggregate:** {design['data']['Coarse Aggregate']} kg/m³")
-                st.markdown(f"**Air Content:** {design['data']['Air Content']}%")
-                st.markdown(f"**Admixture:** {design['data']['Admixture']} kg/m³")
-            
-            with col2:
-                if design['chart']:
-                    try:
-                        st.image(
-                            design['chart'], 
-                            caption="Mix Composition", 
-                            use_container_width=True,
-                            output_format="PNG"
-                        )
-                    except Exception as e:
-                        st.error(f"Error displaying chart: {str(e)}")
+            st.markdown(f"**Target Strength:** {design['data']['Target Mean Strength']} MPa")
+            st.markdown(f"**Construction Type:** {design['data']['Construction Type']}")
+            st.markdown(f"**Water:** {design['data']['Water']} kg/m³")
+            st.markdown(f"**Cement:** {design['data']['Cement']} kg/m³")
+            st.markdown(f"**Fine Aggregate:** {design['data']['Fine Aggregate']} kg/m³")
+            st.markdown(f"**Coarse Aggregate:** {design['data']['Coarse Aggregate']} kg/m³")
+            st.markdown(f"**Air Content:** {design['data']['Air Content']}%")
+            st.markdown(f"**Admixture:** {design['data']['Admixture']} kg/m³")
 
 # --- Footer ---
 st.markdown("---")
@@ -1021,6 +909,3 @@ st.markdown(f"""
     {FOOTER_NOTE} | {CLIENT_NAME} | Generated on {datetime.now().strftime('%Y-%m-%d')}
 </div>
 """, unsafe_allow_html=True)
-
-# Simple screen size detection
-st.session_state.screen_width = 1200  # Default to desktop

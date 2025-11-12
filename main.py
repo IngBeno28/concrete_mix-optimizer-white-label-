@@ -89,6 +89,12 @@ except FileNotFoundError:
             padding: 5px !important;
             font-weight: bold !important; /* Apply bold to all cells */
         }}
+        /* Responsive table adjustments */
+        @media (max-width: 768px) {{
+            .stDataFrame {{
+                font-size: 0.8rem;
+            }}
+        }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -459,10 +465,23 @@ def generate_pie_chart(data):
             
         plt.style.use('default')
         
-        # Dynamic figure sizing based on container
-        # Use smaller size that fits better in Streamlit columns
-        fig_width = 6  # Reduced from 10 to 6 for better fit
-        fig, ax = plt.subplots(figsize=(fig_width, fig_width))  # Square aspect ratio
+        # Dynamic figure sizing based on screen size
+        # Use smaller size for mobile, larger for desktop
+        screen_width = st.session_state.get('screen_width', 1200)  # Default to desktop
+        if screen_width < 768:  # Mobile
+            fig_width = 4
+            font_size = 8
+            title_size = 10
+        elif screen_width < 1024:  # Tablet
+            fig_width = 5
+            font_size = 9
+            title_size = 12
+        else:  # Desktop
+            fig_width = 6
+            font_size = 10
+            title_size = 14
+        
+        fig, ax = plt.subplots(figsize=(fig_width, fig_width))
         
         colors = ['#2196F3', '#FF9800', '#4CAF50', '#F44336']
         wedges, texts, autotexts = ax.pie(
@@ -471,23 +490,23 @@ def generate_pie_chart(data):
             autopct='%1.1f%%',
             startangle=90,
             colors=colors[:len(material_components)],
-            textprops={'fontsize': 10, 'color': 'white', 'fontweight': 'bold'},  # Slightly smaller font
+            textprops={'fontsize': font_size, 'color': 'white', 'fontweight': 'bold'},
             wedgeprops={'edgecolor': 'black', 'linewidth': 1},
             pctdistance=0.85
         )
         
         ax.axis('equal')
-        ax.set_title('Mix Composition', fontsize=14, pad=15, color='white', fontweight='bold')  # Smaller title
+        ax.set_title('Mix Composition', fontsize=title_size, pad=15, color='white', fontweight='bold')
         
         # Improve text visibility
         for autotext in autotexts:
             autotext.set_color('white')
             autotext.set_fontweight('bold')
-            autotext.set_fontsize(10)  # Smaller percentage text
+            autotext.set_fontsize(font_size)
         
         for text in texts:
             text.set_color('white')
-            text.set_fontsize(10)  # Smaller label text
+            text.set_fontsize(font_size)
             text.set_fontweight('bold')
         
         # Set background colors
@@ -499,9 +518,9 @@ def generate_pie_chart(data):
         plt.savefig(
             buf, 
             format='png', 
-            dpi=120,  # Reduced DPI for better Streamlit performance
+            dpi=120,
             bbox_inches='tight',
-            pad_inches=0.05,  # Reduced padding
+            pad_inches=0.05,
             facecolor=fig.get_facecolor(), 
             edgecolor='none', 
             transparent=False
@@ -512,47 +531,6 @@ def generate_pie_chart(data):
         
     except Exception as e:
         st.error(f"Chart generation error: {str(e)}")
-        return None
-
-def generate_bar_chart(data):
-    """Generate bar chart of material composition with improved styling"""
-    try:
-        material_components = {
-            k: v for k, v in data.items() 
-            if k in ["Water", "Cement", "Fine Aggregate", "Coarse Aggregate"] and v > 0
-        }
-        
-        if not material_components:
-            return None
-            
-        plt.style.use('default')
-        fig, ax = plt.subplots(figsize=(10, 6))  # Adjusted size for better visibility
-        
-        colors = ['#2196F3', '#FF9800', '#4CAF50', '#F44336']  # Blue, Orange, Green, Red
-        bars = ax.bar(material_components.keys(), material_components.values(), color=colors[:len(material_components)])
-        
-        ax.set_title('Mix Composition', fontsize=16, pad=20, color='white', fontweight='bold')
-        ax.set_ylabel('Quantity (kg/m³)', fontsize=12, color='white')
-        ax.set_facecolor('#1E1E1E')
-        fig.patch.set_facecolor('#121212')
-        
-        for bar in bars:
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height,
-                    f'{height:.1f}',
-                    ha='center', va='bottom', fontsize=10, color='white', fontweight='bold')
-        
-        ax.tick_params(axis='x', colors='white', labelsize=12)
-        ax.tick_params(axis='y', colors='white', labelsize=12)
-        
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', dpi=200, bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none', transparent=False)
-        buf.seek(0)
-        plt.close(fig)
-        return buf
-        
-    except Exception as e:
-        st.error(f"Bar chart generation error: {str(e)}")
         return None
 
 def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
@@ -898,8 +876,8 @@ else:
     st.markdown("---")
     st.subheader("📊 Current Mix Design Results")
     
-    # Display results in columns with adjusted layout
-    col1, col2 = st.columns([1.2, 1])  # Give more space to the table column
+    # Responsive layout - stack on mobile, side-by-side on larger screens
+    col1, col2 = st.columns([1.2, 1])
     
     with col1:
         st.markdown("**Mix Proportions:**")
@@ -915,28 +893,30 @@ else:
                      str(current_design['data']['Air Content']),
                      str(current_design['data']['Admixture'])]
         }
+        
         if not all(results_data["Parameter"]) or not all(results_data["Value"]):
             st.error("Error: Table data is empty or invalid. Please check the mix design calculation.")
         else:
-            # Convert to DataFrame and apply bold styling
+            # Convert to DataFrame with responsive settings
             df = pd.DataFrame(results_data)
             styled_df = df.style.set_properties(**{'font-weight': 'bold', 'text-align': 'center'})
-            st.dataframe(styled_df, use_container_width=True)
+            st.dataframe(
+                styled_df, 
+                use_container_width=True,
+                height=min(len(results_data["Parameter"]) * 45 + 50, 400)  # Dynamic height
+            )
 
     with col2:
-        # Chart type selection
-        chart_type = st.radio("Chart Type", ["Pie", "Bar"], index=0, key="chart_type_radio")
-        
-        if chart_type == "Pie" and current_design['chart']:
+        st.markdown("**Mix Composition**")
+        if current_design['chart']:
             try:
-                # Add a container to ensure proper sizing
-                with st.container():
-                    st.image(
-                        current_design['chart'], 
-                        caption="Mix Composition", 
-                        use_container_width=True,  # This is key for responsive sizing
-                        output_format="PNG"
-                    )
+                # Use container width for responsive image sizing
+                st.image(
+                    current_design['chart'], 
+                    caption="", 
+                    use_container_width=True,
+                    output_format="PNG"
+                )
             except Exception as e:
                 st.error(f"Error displaying pie chart: {str(e)}")
 
@@ -952,12 +932,7 @@ else:
                 early_strength_required, steam_curing, target_demould_time
             )
             if result:
-                # Generate the correct chart type based on selection
-                if chart_type == "Pie":
-                    chart_buf = generate_pie_chart(result)
-                else:
-                    chart_buf = generate_bar_chart(result)
-                    
+                chart_buf = generate_pie_chart(result)
                 st.session_state['mix_designs'][-1] = {
                     'data': result,
                     'chart': chart_buf,
@@ -1046,3 +1021,6 @@ st.markdown(f"""
     {FOOTER_NOTE} | {CLIENT_NAME} | Generated on {datetime.now().strftime('%Y-%m-%d')}
 </div>
 """, unsafe_allow_html=True)
+
+# Simple screen size detection
+st.session_state.screen_width = 1200  # Default to desktop

@@ -32,6 +32,7 @@ if 'default_params' not in st.session_state:
         'air_entrained': False,
         'air_content': 5.0,
         'wcm': 0.5,
+        'auto_wcm': True,
         'admixture': 0.0,
         'fm': 2.7,
         'sg_cement': 3.15,
@@ -200,6 +201,34 @@ ACI_EXPOSURE = {
     "Severe": {"max_wcm": 0.45, "min_cement": 335}
 }
 
+# Approximate ACI 211.1 relationship between required average compressive
+# strength (f'cr, MPa) and water-cement ratio, non-air-entrained concrete.
+# Used to derive a strength-governed w/c ratio that is then checked against
+# the exposure-class (and industrialized-construction) maximum — whichever
+# is stricter/lower governs.
+ACI_WCM_VS_STRENGTH = {
+    15: 0.62,
+    20: 0.55,
+    25: 0.48,
+    30: 0.40,
+    35: 0.33,
+    40: 0.30
+}
+
+def wcm_from_strength(ft_value):
+    """Interpolate w/c ratio from required strength using ACI 211.1 table."""
+    pts = sorted(ACI_WCM_VS_STRENGTH.items())
+    strengths = [p[0] for p in pts]
+    if ft_value <= strengths[0]:
+        return pts[0][1]
+    if ft_value >= strengths[-1]:
+        return pts[-1][1]
+    for (s1, w1), (s2, w2) in zip(pts, pts[1:]):
+        if s1 <= ft_value <= s2:
+            frac = (ft_value - s1) / (s2 - s1)
+            return w1 + frac * (w2 - w1)
+    return pts[-1][1]
+
 # --- Industrialized Construction Inputs ---
 st.markdown("**Project Name**")
 project_name = st.text_input("", "Unnamed Project", key="project_name_input")
@@ -308,12 +337,16 @@ with st.expander("📋 ACI Design Inputs", expanded=True):
         if 'wcm_reduction' in construction_info:
             base_wcm = max(0.3, base_wcm - construction_info['wcm_reduction'])
         
+        st.markdown("**Auto-derive w/c from f'cr (ACI 211.1)**")
+        auto_wcm = st.checkbox("", current_params.get('auto_wcm', True), key="auto_wcm_input")
+        
         st.markdown("**w/c Ratio**")
         wcm = st.number_input(
             "", 
             0.3, 0.7, 
             base_wcm,
-            help="Reduced for industrialized construction requirements" if 'wcm_reduction' in construction_info else "",
+            help="Used only when auto-derive is off. Reduced for industrialized construction requirements" if 'wcm_reduction' in construction_info else "Used only when auto-derive is off.",
+            disabled=auto_wcm,
             key="wcm_input"
         )
         
@@ -347,12 +380,17 @@ def calculate_mix(
     fck, std_dev, exposure, max_agg_size, slump, air_entrained,
     air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
     unit_weight_ca, moist_fa, moist_ca, construction_type, production_method,
-    early_strength_required, steam_curing, target_demould_time
+    early_strength_required, steam_curing, target_demould_time, auto_wcm=True
 ):
     """Calculate concrete mix design with industrialized construction considerations"""
     try:
-        # Calculate target mean strength
-        ft = fck + 1.64 * std_dev
+        # Calculate target mean strength (ACI 318 Table 5.3.2.1: the GOVERNING
+        # / larger result of two equations, which differ depending on whether
+        # f'c is at or below 35 MPa, or above it).
+        if fck <= 35:
+            ft = max(fck + 1.34 * std_dev, fck + 2.33 * std_dev - 3.45)
+        else:
+            ft = max(fck + 1.34 * std_dev, 0.90 * fck + 2.33 * std_dev)
         
         # Industrialized construction adjustments
         construction_info = CONSTRUCTION_TYPES[construction_type]
@@ -363,13 +401,19 @@ def calculate_mix(
             strength_adjustment = 1.15  # 15% strength increase for early demould
             ft *= strength_adjustment
         
-        # Check w/c ratio against exposure limits
+        # Determine governing w/c ratio
         max_wcm = ACI_EXPOSURE[exposure]['max_wcm']
         if 'wcm_reduction' in construction_info:
             max_wcm -= construction_info['wcm_reduction']
         
-        if wcm > max_wcm:
-            st.warning(f"w/c ratio exceeds maximum recommended for {construction_type} ({max_wcm})")
+        if auto_wcm:
+            # Derive w/c from the (possibly early-strength-adjusted) target
+            # strength, then apply the stricter of that and the exposure /
+            # construction-type max w/c — whichever is lower governs.
+            wcm = min(wcm_from_strength(ft), max_wcm)
+        else:
+            if wcm > max_wcm:
+                st.warning(f"w/c ratio exceeds maximum recommended for {construction_type} ({max_wcm})")
         
         # Determine water content
         water_table = ACI_WATER_CONTENT["Air-Entrained" if air_entrained else "Non-Air-Entrained"]
@@ -437,6 +481,7 @@ def calculate_mix(
         
         return {
             "Target Mean Strength": round(ft, 2),
+            "Governing w/c Ratio": round(wcm, 3),
             "Water": round(water, 1),
             "Cement": round(cement, 1),
             "Fine Aggregate": round(fa_mass_adj, 1),
@@ -581,7 +626,7 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
                 ("Slump", f"{params['slump']}", "mm"),
                 ("Air Entrained", f"{'Yes' if params['air_entrained'] else 'No'}", ""),
                 ("Target Air Content", f"{params['air_content']}" if params['air_entrained'] else "N/A", "%"),
-                ("w/c Ratio", f"{params['wcm']}", ""),
+                ("w/c Ratio", f"{params['wcm']}" if not params.get('auto_wcm', True) else "Auto-derived (see result table)", ""),
                 ("Admixture", f"{params['admixture']}", "%"),
                 ("FA Fineness Modulus", f"{params['fm']}", "")
             ]
@@ -622,7 +667,7 @@ if not st.session_state['show_new_design']:
             fck, std_dev, exposure, max_agg_size, slump, air_entrained,
             air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
             unit_weight_ca, moist_fa, moist_ca, construction_type, production_method,
-            early_strength_required, steam_curing, target_demould_time
+            early_strength_required, steam_curing, target_demould_time, auto_wcm
         )
         if result:
             st.session_state['mix_designs'].append({
@@ -637,6 +682,7 @@ if not st.session_state['show_new_design']:
                     'air_entrained': air_entrained,
                     'air_content': air_content,
                     'wcm': wcm,
+                    'auto_wcm': auto_wcm,
                     'admixture': admixture,
                     'fm': fm,
                     'sg_cement': sg_cement,
@@ -700,9 +746,18 @@ else:
                 air_content = 0.0
 
         with col3:
+            st.markdown("**Auto-derive w/c from f'cr (ACI 211.1)**")
+            auto_wcm = st.checkbox(
+                "",
+                st.session_state['mix_designs'][-1]['inputs'].get('auto_wcm', True),
+                key="mod_auto_wcm"
+            )
+            
             st.markdown("**w/c Ratio**")
             wcm = st.number_input("", 0.3, 0.7, 
                                 st.session_state['mix_designs'][-1]['inputs']['wcm'],
+                                help="Used only when auto-derive is off.",
+                                disabled=auto_wcm,
                                 key="mod_wcm")
             
             st.markdown("**Admixture (%)**")
@@ -801,10 +856,11 @@ else:
     # Single column layout since pie chart is removed
     st.markdown("**Mix Proportions:**")
     results_data = {
-        "Parameter": ["Target Mean Strength ft (MPa)", "Water (kg/m³)", "Cement (kg/m³)", 
+        "Parameter": ["Target Mean Strength ft (MPa)", "Governing w/c Ratio", "Water (kg/m³)", "Cement (kg/m³)", 
                      "Fine Aggregate (kg/m³)", "Coarse Aggregate (kg/m³)", "Air Content (%)", 
                      "Admixture (kg/m³)"],
         "Value": [str(current_design['data']['Target Mean Strength']),
+                 str(current_design['data']['Governing w/c Ratio']),
                  str(current_design['data']['Water']),
                  str(current_design['data']['Cement']),
                  str(current_design['data']['Fine Aggregate']),
@@ -834,7 +890,7 @@ else:
                 fck, std_dev, exposure, max_agg_size, slump, air_entrained,
                 air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
                 unit_weight_ca, moist_fa, moist_ca, construction_type, production_method,
-                early_strength_required, steam_curing, target_demould_time
+                early_strength_required, steam_curing, target_demould_time, auto_wcm
             )
             if result:
                 st.session_state['mix_designs'][-1] = {
@@ -849,6 +905,7 @@ else:
                         'air_entrained': air_entrained,
                         'air_content': air_content,
                         'wcm': wcm,
+                        'auto_wcm': auto_wcm,
                         'admixture': admixture,
                         'fm': fm,
                         'sg_cement': sg_cement,
@@ -894,6 +951,7 @@ if len(st.session_state['mix_designs']) > 0:
     for i, design in enumerate(st.session_state['mix_designs']):
         with st.expander(f"Design #{i+1} - {design['timestamp']} - {design['data']['Construction Type']}"):
             st.markdown(f"**Target Strength:** {design['data']['Target Mean Strength']} MPa")
+            st.markdown(f"**Governing w/c Ratio:** {design['data']['Governing w/c Ratio']}")
             st.markdown(f"**Construction Type:** {design['data']['Construction Type']}")
             st.markdown(f"**Water:** {design['data']['Water']} kg/m³")
             st.markdown(f"**Cement:** {design['data']['Cement']} kg/m³")

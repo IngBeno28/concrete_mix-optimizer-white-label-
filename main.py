@@ -540,16 +540,73 @@ def calculate_mix(
         st.error(f"Calculation error: {str(e)}")
         return None
 
-def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
+class BrandedPDF(FPDF):
+    """FPDF subclass that stamps company/branding details on every page footer."""
+    def footer(self):
+        self.set_y(-18)
+        self.set_draw_color(180, 180, 180)
+        self.line(10, self.get_y(), self.w - 10, self.get_y())
+        self.set_font("Arial", '', 8)
+        self.set_text_color(120, 120, 120)
+        footer_left = f"{CLIENT_NAME} | {FOOTER_NOTE}" if FOOTER_NOTE else CLIENT_NAME
+        self.cell(0, 6, footer_left.encode('latin-1', errors='replace').decode('latin-1'), 0, 0, 'L')
+        self.cell(0, 6, f"Page {self.page_no()}/{{nb}}", 0, 0, 'R')
+        self.set_text_color(0, 0, 0)
+
+def create_pdf_report_multiple(designs: list, project_name: str, engineer_name: str = "",
+                                license_no: str = "", stamp_image_path: str = None) -> bytes:
     """Generate a comprehensive PDF report with all mix designs including parameter tables"""
     try:
-        pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf = BrandedPDF()
+        pdf.alias_nb_pages()
+        pdf.set_auto_page_break(auto=True, margin=22)
         
         def safe_text(text):
             if not isinstance(text, str):
                 text = str(text)
             return text.encode('latin-1', errors='replace').decode('latin-1')
+
+        def draw_table_row(col_widths, values, aligns=None, line_height=5, min_row_height=8, bold=False):
+            """Draw one table row whose cells word-wrap to fit any amount of text,
+            instead of overflowing a fixed single-line cell."""
+            if aligns is None:
+                aligns = ['L'] * len(values)
+            pdf.set_font("Arial", 'B' if bold else '', 10)
+            x_start = (pdf.w - sum(col_widths)) / 2
+
+            def wrap(text, width):
+                text = safe_text(text)
+                usable = width - 2
+                words = text.split(' ')
+                lines, current = [], ""
+                for word in words:
+                    trial = (current + " " + word).strip()
+                    if not current or pdf.get_string_width(trial) <= usable:
+                        current = trial
+                    else:
+                        lines.append(current)
+                        current = word
+                if current:
+                    lines.append(current)
+                return lines or [""]
+
+            wrapped = [wrap(v, w) for v, w in zip(values, col_widths)]
+            n_lines = max(len(w) for w in wrapped)
+            row_height = max(min_row_height, n_lines * line_height)
+
+            if pdf.get_y() + row_height > pdf.h - pdf.b_margin:
+                pdf.add_page()
+
+            y_start = pdf.get_y()
+            x = x_start
+            for width, lines, align in zip(col_widths, wrapped, aligns):
+                pdf.rect(x, y_start, width, row_height)
+                pdf.set_xy(x, y_start + (row_height - len(lines) * line_height) / 2)
+                for line in lines:
+                    pdf.set_x(x)
+                    pdf.cell(width, line_height, line, 0, 2, align)
+                x += width
+            pdf.set_y(y_start + row_height)
 
         # --- Cover Page with Logo ---
         pdf.add_page()
@@ -592,20 +649,12 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
             pdf.set_font("Arial", 'B', 12)
             pdf.cell(0, 10, safe_text("Mix Design Results"), 0, 1, 'C')
             
-            col_widths = [70, 30, 30]
-            pdf.set_font("Arial", 'B', 10)
-            pdf.set_x((pdf.w - sum(col_widths))/2)
-            pdf.cell(col_widths[0], 8, safe_text("Parameter"), 1, 0, 'C')
-            pdf.cell(col_widths[1], 8, safe_text("Value"), 1, 0, 'C')
-            pdf.cell(col_widths[2], 8, safe_text("Unit"), 1, 1, 'C')
+            col_widths = [80, 50, 30]
+            draw_table_row(col_widths, ["Parameter", "Value", "Unit"], aligns=['L', 'C', 'C'], bold=True)
             
-            pdf.set_font("Arial", '', 10)
             for param, value in design['data'].items():
                 if param not in ['Industrialized Factors', 'Construction Type', 'Production Method', 'Demould Strength']:
-                    pdf.set_x((pdf.w - sum(col_widths))/2)
-                    pdf.cell(col_widths[0], 8, safe_text(param), 1)
-                    pdf.cell(col_widths[1], 8, safe_text(f"{value:.2f}"), 1, 0, 'C')
-                    pdf.cell(col_widths[2], 8, safe_text({
+                    unit = {
                         "Target Mean Strength": "MPa",
                         "Water": "kg/m³",
                         "Cement": "kg/m³",
@@ -615,8 +664,8 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
                         "Coarse Aggregate 10mm": "kg/m³",
                         "Air Content": "%",
                         "Admixture": "kg/m³"
-                    }.get(param, "-")), 1, 0, 'C')
-                    pdf.ln(8)
+                    }.get(param, "-")
+                    draw_table_row(col_widths, [param, f"{value:.2f}", unit], aligns=['L', 'C', 'C'])
 
             pdf.ln(10)
             pdf.set_font("Arial", 'B', 12)
@@ -636,14 +685,8 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
             params = design['inputs']
             
             # Design Parameters Table with proper headers
-            param_col_widths = [70, 30, 30]
-            pdf.set_font("Arial", 'B', 10)
-            pdf.set_x((pdf.w - sum(param_col_widths))/2)
-            pdf.cell(param_col_widths[0], 8, safe_text("Parameter"), 1, 0, 'C')
-            pdf.cell(param_col_widths[1], 8, safe_text("Value"), 1, 0, 'C')
-            pdf.cell(param_col_widths[2], 8, safe_text("Unit"), 1, 1, 'C')
-            
-            pdf.set_font("Arial", '', 10)
+            param_col_widths = [80, 50, 30]
+            draw_table_row(param_col_widths, ["Parameter", "Value", "Unit"], aligns=['L', 'C', 'C'], bold=True)
             
             # Material Properties
             is_dual_ca = params.get('use_dual_ca', False)
@@ -665,11 +708,7 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
             ])
             
             for param, value, unit in material_properties:
-                pdf.set_x((pdf.w - sum(param_col_widths))/2)
-                pdf.cell(param_col_widths[0], 8, safe_text(param), 1)
-                pdf.cell(param_col_widths[1], 8, safe_text(value), 1, 0, 'C')
-                pdf.cell(param_col_widths[2], 8, safe_text(unit), 1, 0, 'C')
-                pdf.ln(8)
+                draw_table_row(param_col_widths, [param, value, unit], aligns=['L', 'C', 'C'])
             
             # Mix Parameters
             mix_parameters = [
@@ -686,11 +725,7 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
             ]
             
             for param, value, unit in mix_parameters:
-                pdf.set_x((pdf.w - sum(param_col_widths))/2)
-                pdf.cell(param_col_widths[0], 8, safe_text(param), 1)
-                pdf.cell(param_col_widths[1], 8, safe_text(value), 1, 0, 'C')
-                pdf.cell(param_col_widths[2], 8, safe_text(unit), 1, 0, 'C')
-                pdf.ln(8)
+                draw_table_row(param_col_widths, [param, value, unit], aligns=['L', 'C', 'C'])
             
             # Industrialized Parameters
             industrialized_parameters = [
@@ -702,11 +737,59 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
             ]
             
             for param, value, unit in industrialized_parameters:
-                pdf.set_x((pdf.w - sum(param_col_widths))/2)
-                pdf.cell(param_col_widths[0], 8, safe_text(param), 1)
-                pdf.cell(param_col_widths[1], 8, safe_text(value), 1, 0, 'C')
-                pdf.cell(param_col_widths[2], 8, safe_text(unit), 1, 0, 'C')
-                pdf.ln(8)
+                draw_table_row(param_col_widths, [param, value, unit], aligns=['L', 'C', 'C'])
+
+        # --- Certification / Sign-off Page ---
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 18)
+        pdf.cell(0, 15, safe_text("Certification"), 0, 1, 'C')
+        pdf.ln(4)
+
+        pdf.set_font("Arial", '', 11)
+        pdf.multi_cell(0, 7, safe_text(
+            "This concrete mix design report has been reviewed and is certified as suitable "
+            "for the stated project and construction requirements."
+        ))
+        pdf.ln(10)
+
+        pdf.set_font("Arial", 'B', 11)
+        pdf.cell(60, 8, safe_text("Engineer Name:"), 0, 0)
+        pdf.set_font("Arial", '', 11)
+        pdf.cell(0, 8, safe_text(engineer_name), 'B', 1)
+        pdf.ln(6)
+
+        pdf.set_font("Arial", 'B', 11)
+        pdf.cell(60, 8, safe_text("License / Registration No.:"), 0, 0)
+        pdf.set_font("Arial", '', 11)
+        pdf.cell(0, 8, safe_text(license_no), 'B', 1)
+        pdf.ln(6)
+
+        pdf.set_font("Arial", 'B', 11)
+        pdf.cell(60, 8, safe_text("Date:"), 0, 0)
+        pdf.set_font("Arial", '', 11)
+        pdf.cell(0, 8, safe_text(datetime.now().strftime('%Y-%m-%d')), 'B', 1)
+        pdf.ln(15)
+
+        pdf.set_font("Arial", 'B', 11)
+        pdf.cell(0, 8, safe_text("Signature / Stamp"), 0, 1)
+        box_y = pdf.get_y()
+        box_w, box_h = 70, 35
+        if stamp_image_path and os.path.exists(stamp_image_path):
+            try:
+                pdf.image(stamp_image_path, x=15, y=box_y, w=box_w, h=box_h)
+            except Exception:
+                pdf.rect(15, box_y, box_w, box_h)
+        else:
+            pdf.rect(15, box_y, box_w, box_h)
+        pdf.set_y(box_y + box_h + 8)
+
+        pdf.set_font("Arial", '', 9)
+        pdf.set_text_color(120, 120, 120)
+        prepared_by = f"Report prepared using {APP_TITLE} by {CLIENT_NAME}."
+        if FOOTER_NOTE:
+            prepared_by += f" {FOOTER_NOTE}"
+        pdf.multi_cell(0, 5, safe_text(prepared_by))
+        pdf.set_text_color(0, 0, 0)
 
         return pdf.output(dest='S').encode('latin-1', errors='replace')
             
@@ -972,6 +1055,24 @@ else:
             height=min(len(results_data["Parameter"]) * 45 + 50, 400)  # Dynamic height
         )
 
+    # --- Certification Details for PDF Report ---
+    with st.expander("🖋️ Certification Details (for PDF Report)"):
+        st.markdown("**Engineer Name**")
+        engineer_name = st.text_input("", st.session_state.get('engineer_name', ''), key="engineer_name_input")
+        st.session_state['engineer_name'] = engineer_name
+
+        st.markdown("**License / Registration No.**")
+        license_no = st.text_input("", st.session_state.get('license_no', ''), key="license_no_input")
+        st.session_state['license_no'] = license_no
+
+        st.markdown("**Signature / Stamp Image (optional)**")
+        stamp_file = st.file_uploader("", type=['png', 'jpg', 'jpeg'], key="stamp_upload")
+        if stamp_file is not None:
+            st.session_state['stamp_bytes'] = stamp_file.getvalue()
+        if st.session_state.get('stamp_bytes'):
+            st.image(st.session_state['stamp_bytes'], width=150, caption="Stamp preview")
+        st.caption("Leave blank to print an empty signature box in the report for a physical wet stamp instead.")
+
     # Action buttons
     col1, col2, col3 = st.columns([1, 1, 2])
     
@@ -1027,7 +1128,22 @@ else:
     with col3:
         if st.button("📄 Generate PDF Report"):
             if st.session_state['mix_designs']:
-                pdf_data = create_pdf_report_multiple(st.session_state['mix_designs'], project_name)
+                stamp_path = None
+                if st.session_state.get('stamp_bytes'):
+                    stamp_path = os.path.join(
+                        tempfile.gettempdir(),
+                        f"temp_stamp_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.png"
+                    )
+                    with open(stamp_path, 'wb') as f:
+                        f.write(st.session_state['stamp_bytes'])
+                pdf_data = create_pdf_report_multiple(
+                    st.session_state['mix_designs'], project_name,
+                    engineer_name=st.session_state.get('engineer_name', ''),
+                    license_no=st.session_state.get('license_no', ''),
+                    stamp_image_path=stamp_path
+                )
+                if stamp_path and os.path.exists(stamp_path):
+                    os.unlink(stamp_path)
                 if pdf_data:
                     st.download_button(
                         label="⬇️ Download PDF Report",

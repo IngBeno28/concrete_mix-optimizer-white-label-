@@ -39,6 +39,9 @@ if 'default_params' not in st.session_state:
         'sg_fa': 2.65,
         'sg_ca': 2.65,
         'unit_weight_ca': 1600,
+        'use_dual_ca': False,
+        'ca_20mm_pct': 60,
+        'blend_unit_weight': 1650,
         'moist_fa': 2.0,
         'moist_ca': 1.0,
         'construction_type': 'Traditional Cast-in-Place',
@@ -366,8 +369,34 @@ with st.expander("🔬 Material Properties"):
     st.markdown("**Coarse Aggregate SG**")
     sg_ca = st.number_input("", 2.4, 2.8, current_params['sg_ca'], key="sg_ca_input")
     
-    st.markdown("**CA Unit Weight (kg/m³)**")
-    unit_weight_ca = st.number_input("", 1400, 1800, current_params['unit_weight_ca'], key="unit_weight_ca_input")
+    st.markdown("**Coarse Aggregate Blend**")
+    use_dual_ca = st.checkbox(
+        "Use two CA sizes (10mm + 20mm blend)",
+        current_params.get('use_dual_ca', False),
+        key="use_dual_ca_input"
+    )
+
+    if use_dual_ca:
+        if max_agg_size != 20:
+            st.warning("Dual-size blend assumes 20mm is the largest stone present — set **Max Aggregate Size** above to 20mm.")
+
+        st.markdown("**20mm Fraction of Coarse Aggregate (%)**")
+        ca_20mm_pct = st.slider(
+            "", 0, 100, current_params.get('ca_20mm_pct', 60),
+            help="Remainder is made up of 10mm stone. Solve this against your target grading envelope (e.g. ASTM C33) for the combined blend.",
+            key="ca_20mm_pct_input"
+        )
+
+        st.markdown("**Blended CA Unit Weight (kg/m³)**")
+        unit_weight_ca = st.number_input(
+            "", 1400, 1900, current_params.get('blend_unit_weight', 1650),
+            help="Measure the dry-rodded unit weight of the actual combined 10+20mm blend per ASTM C29 — a well-graded blend packs tighter (higher unit weight) than either single size alone.",
+            key="blend_unit_weight_input"
+        )
+    else:
+        ca_20mm_pct = 100
+        st.markdown("**CA Unit Weight (kg/m³)**")
+        unit_weight_ca = st.number_input("", 1400, 1800, current_params['unit_weight_ca'], key="unit_weight_ca_input")
     
     st.markdown("**FA Moisture (%)**")
     moist_fa = st.number_input("", 0.0, 10.0, current_params['moist_fa'], key="moist_fa_input")
@@ -380,7 +409,8 @@ def calculate_mix(
     fck, std_dev, exposure, max_agg_size, slump, air_entrained,
     air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
     unit_weight_ca, moist_fa, moist_ca, construction_type, production_method,
-    early_strength_required, steam_curing, target_demould_time, auto_wcm=True
+    early_strength_required, steam_curing, target_demould_time, auto_wcm=True,
+    use_dual_ca=False, ca_20mm_pct=100
 ):
     """Calculate concrete mix design with industrialized construction considerations"""
     try:
@@ -457,6 +487,15 @@ def calculate_mix(
         ca_mass_adj = ca_mass * (1 + moist_ca / 100)
         water -= (fa_mass * moist_fa / 100 + ca_mass * moist_ca / 100)
         
+        # Split combined coarse aggregate into 10mm / 20mm stock sizes.
+        # ACI 211.1's table already gives the TOTAL blended CA volume for
+        # the largest NMAS present (20mm) — the split below is a batching
+        # breakdown only, using the same moisture correction as the total,
+        # so the two fractions always sum back to ca_mass_adj.
+        if use_dual_ca:
+            ca_20mm_mass_adj = ca_mass_adj * (ca_20mm_pct / 100)
+            ca_10mm_mass_adj = ca_mass_adj - ca_20mm_mass_adj
+        
         # Calculate admixture amount
         admix_amount = cement * admixture / 100
         
@@ -486,6 +525,10 @@ def calculate_mix(
             "Cement": round(cement, 1),
             "Fine Aggregate": round(fa_mass_adj, 1),
             "Coarse Aggregate": round(ca_mass_adj, 1),
+            **({
+                "Coarse Aggregate 20mm": round(ca_20mm_mass_adj, 1),
+                "Coarse Aggregate 10mm": round(ca_10mm_mass_adj, 1),
+            } if use_dual_ca else {}),
             "Air Content": round(air_content, 1),
             "Admixture": round(admix_amount, 2),
             "Industrialized Factors": industrialized_factors,
@@ -568,6 +611,8 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
                         "Cement": "kg/m³",
                         "Fine Aggregate": "kg/m³",
                         "Coarse Aggregate": "kg/m³",
+                        "Coarse Aggregate 20mm": "kg/m³",
+                        "Coarse Aggregate 10mm": "kg/m³",
                         "Air Content": "%",
                         "Admixture": "kg/m³"
                     }.get(param, "-")), 1, 0, 'C')
@@ -601,14 +646,23 @@ def create_pdf_report_multiple(designs: list, project_name: str) -> bytes:
             pdf.set_font("Arial", '', 10)
             
             # Material Properties
+            is_dual_ca = params.get('use_dual_ca', False)
             material_properties = [
                 ("Cement SG", f"{params['sg_cement']}", ""),
                 ("Fine Aggregate SG", f"{params['sg_fa']}", ""),
                 ("Coarse Aggregate SG", f"{params['sg_ca']}", ""),
-                ("CA Unit Weight", f"{params['unit_weight_ca']}", "kg/m³"),
+                ("CA Unit Weight" + (" (10+20mm blend)" if is_dual_ca else ""),
+                 f"{params.get('blend_unit_weight', params['unit_weight_ca']) if is_dual_ca else params['unit_weight_ca']}",
+                 "kg/m³"),
+            ]
+            if is_dual_ca:
+                material_properties.append(
+                    ("CA Blend Split", f"{params.get('ca_20mm_pct', 100)}% 20mm / {100 - params.get('ca_20mm_pct', 100)}% 10mm", "")
+                )
+            material_properties.extend([
                 ("FA Moisture", f"{params['moist_fa']}", "%"),
                 ("CA Moisture", f"{params['moist_ca']}", "%")
-            ]
+            ])
             
             for param, value, unit in material_properties:
                 pdf.set_x((pdf.w - sum(param_col_widths))/2)
@@ -667,7 +721,8 @@ if not st.session_state['show_new_design']:
             fck, std_dev, exposure, max_agg_size, slump, air_entrained,
             air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
             unit_weight_ca, moist_fa, moist_ca, construction_type, production_method,
-            early_strength_required, steam_curing, target_demould_time, auto_wcm
+            early_strength_required, steam_curing, target_demould_time, auto_wcm,
+            use_dual_ca, ca_20mm_pct
         )
         if result:
             st.session_state['mix_designs'].append({
@@ -689,6 +744,9 @@ if not st.session_state['show_new_design']:
                     'sg_fa': sg_fa,
                     'sg_ca': sg_ca,
                     'unit_weight_ca': unit_weight_ca,
+                    'use_dual_ca': use_dual_ca,
+                    'ca_20mm_pct': ca_20mm_pct,
+                    'blend_unit_weight': unit_weight_ca if use_dual_ca else current_params.get('blend_unit_weight', 1650),
                     'moist_fa': moist_fa,
                     'moist_ca': moist_ca,
                     'construction_type': construction_type,
@@ -788,10 +846,38 @@ else:
                               st.session_state['mix_designs'][-1]['inputs']['sg_ca'],
                               key="mod_sg_ca")
         
-        st.markdown("**CA Unit Weight (kg/m³)**")
-        unit_weight_ca = st.number_input("", 1400, 1800, 
-                                       st.session_state['mix_designs'][-1]['inputs']['unit_weight_ca'],
-                                       key="mod_unit_weight_ca")
+        st.markdown("**Coarse Aggregate Blend**")
+        use_dual_ca = st.checkbox(
+            "Use two CA sizes (10mm + 20mm blend)",
+            st.session_state['mix_designs'][-1]['inputs'].get('use_dual_ca', False),
+            key="mod_use_dual_ca"
+        )
+
+        if use_dual_ca:
+            if max_agg_size != 20:
+                st.warning("Dual-size blend assumes 20mm is the largest stone present — set **Max Aggregate Size** above to 20mm.")
+
+            st.markdown("**20mm Fraction of Coarse Aggregate (%)**")
+            ca_20mm_pct = st.slider(
+                "", 0, 100,
+                st.session_state['mix_designs'][-1]['inputs'].get('ca_20mm_pct', 60),
+                help="Remainder is made up of 10mm stone. Solve this against your target grading envelope (e.g. ASTM C33) for the combined blend.",
+                key="mod_ca_20mm_pct"
+            )
+
+            st.markdown("**Blended CA Unit Weight (kg/m³)**")
+            unit_weight_ca = st.number_input(
+                "", 1400, 1900,
+                st.session_state['mix_designs'][-1]['inputs'].get('blend_unit_weight', 1650),
+                help="Measure the dry-rodded unit weight of the actual combined 10+20mm blend per ASTM C29 — a well-graded blend packs tighter (higher unit weight) than either single size alone.",
+                key="mod_blend_unit_weight"
+            )
+        else:
+            ca_20mm_pct = 100
+            st.markdown("**CA Unit Weight (kg/m³)**")
+            unit_weight_ca = st.number_input("", 1400, 1800, 
+                                           st.session_state['mix_designs'][-1]['inputs']['unit_weight_ca'],
+                                           key="mod_unit_weight_ca")
         
         st.markdown("**FA Moisture (%)**")
         moist_fa = st.number_input("", 0.0, 10.0, 
@@ -855,19 +941,24 @@ else:
     
     # Single column layout since pie chart is removed
     st.markdown("**Mix Proportions:**")
-    results_data = {
-        "Parameter": ["Target Mean Strength ft (MPa)", "Governing w/c Ratio", "Water (kg/m³)", "Cement (kg/m³)", 
-                     "Fine Aggregate (kg/m³)", "Coarse Aggregate (kg/m³)", "Air Content (%)", 
-                     "Admixture (kg/m³)"],
-        "Value": [str(current_design['data']['Target Mean Strength']),
-                 str(current_design['data']['Governing w/c Ratio']),
-                 str(current_design['data']['Water']),
-                 str(current_design['data']['Cement']),
-                 str(current_design['data']['Fine Aggregate']),
-                 str(current_design['data']['Coarse Aggregate']),
-                 str(current_design['data']['Air Content']),
-                 str(current_design['data']['Admixture'])]
-    }
+    params_list = ["Target Mean Strength ft (MPa)", "Governing w/c Ratio", "Water (kg/m³)", "Cement (kg/m³)", 
+                   "Fine Aggregate (kg/m³)", "Coarse Aggregate (kg/m³)"]
+    values_list = [str(current_design['data']['Target Mean Strength']),
+                   str(current_design['data']['Governing w/c Ratio']),
+                   str(current_design['data']['Water']),
+                   str(current_design['data']['Cement']),
+                   str(current_design['data']['Fine Aggregate']),
+                   str(current_design['data']['Coarse Aggregate'])]
+
+    if 'Coarse Aggregate 20mm' in current_design['data']:
+        params_list += ["   ↳ 20mm Fraction (kg/m³)", "   ↳ 10mm Fraction (kg/m³)"]
+        values_list += [str(current_design['data']['Coarse Aggregate 20mm']),
+                        str(current_design['data']['Coarse Aggregate 10mm'])]
+
+    params_list += ["Air Content (%)", "Admixture (kg/m³)"]
+    values_list += [str(current_design['data']['Air Content']), str(current_design['data']['Admixture'])]
+
+    results_data = {"Parameter": params_list, "Value": values_list}
     
     if not all(results_data["Parameter"]) or not all(results_data["Value"]):
         st.error("Error: Table data is empty or invalid. Please check the mix design calculation.")
@@ -890,7 +981,8 @@ else:
                 fck, std_dev, exposure, max_agg_size, slump, air_entrained,
                 air_content, wcm, admixture, fm, sg_cement, sg_fa, sg_ca,
                 unit_weight_ca, moist_fa, moist_ca, construction_type, production_method,
-                early_strength_required, steam_curing, target_demould_time, auto_wcm
+                early_strength_required, steam_curing, target_demould_time, auto_wcm,
+                use_dual_ca, ca_20mm_pct
             )
             if result:
                 st.session_state['mix_designs'][-1] = {
@@ -912,6 +1004,9 @@ else:
                         'sg_fa': sg_fa,
                         'sg_ca': sg_ca,
                         'unit_weight_ca': unit_weight_ca,
+                        'use_dual_ca': use_dual_ca,
+                        'ca_20mm_pct': ca_20mm_pct,
+                        'blend_unit_weight': unit_weight_ca if use_dual_ca else st.session_state['mix_designs'][-1]['inputs'].get('blend_unit_weight', 1650),
                         'moist_fa': moist_fa,
                         'moist_ca': moist_ca,
                         'construction_type': construction_type,
@@ -957,6 +1052,8 @@ if len(st.session_state['mix_designs']) > 0:
             st.markdown(f"**Cement:** {design['data']['Cement']} kg/m³")
             st.markdown(f"**Fine Aggregate:** {design['data']['Fine Aggregate']} kg/m³")
             st.markdown(f"**Coarse Aggregate:** {design['data']['Coarse Aggregate']} kg/m³")
+            if 'Coarse Aggregate 20mm' in design['data']:
+                st.markdown(f"　↳ 20mm: {design['data']['Coarse Aggregate 20mm']} kg/m³ · 10mm: {design['data']['Coarse Aggregate 10mm']} kg/m³")
             st.markdown(f"**Air Content:** {design['data']['Air Content']}%")
             st.markdown(f"**Admixture:** {design['data']['Admixture']} kg/m³")
 

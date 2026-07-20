@@ -8,7 +8,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
 from typing import List, Dict, Optional
-from branding import CLIENT_NAME, APP_TITLE, PRIMARY_COLOR, LOGO_PATH, FOOTER_NOTE, LOGO_CONFIG, LOGO_ALT_TEXT
+from branding import (
+    CLIENT_NAME, APP_TITLE, PRIMARY_COLOR, LOGO_PATH, FOOTER_NOTE, LOGO_CONFIG, LOGO_ALT_TEXT,
+    COMPANY_ADDRESS, COMPANY_PHONE, COMPANY_EMAIL, COMPANY_WEBSITE
+)
 
 # --- Streamlit Config ---
 st.set_page_config(
@@ -235,6 +238,11 @@ def wcm_from_strength(ft_value):
 # --- Industrialized Construction Inputs ---
 st.markdown("**Project Name**")
 project_name = st.text_input("", "Unnamed Project", key="project_name_input")
+
+st.markdown("**Client / Project Owner**")
+client_name = st.text_input("", st.session_state.get('client_name', ''), key="client_name_input",
+                             help="Who this report is prepared for — shown on the PDF cover page, separate from your firm's own branding.")
+st.session_state['client_name'] = client_name
 
 # Get current parameters
 if st.session_state['show_new_design'] and st.session_state['mix_designs']:
@@ -540,21 +548,43 @@ def calculate_mix(
         st.error(f"Calculation error: {str(e)}")
         return None
 
+def hex_to_rgb(hex_color):
+    """Convert a '#RRGGBB' hex string to an (r, g, b) tuple, with a safe fallback."""
+    try:
+        h = hex_color.lstrip('#')
+        return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+    except Exception:
+        return (0, 82, 204)
+
 class BrandedPDF(FPDF):
     """FPDF subclass that stamps company/branding details on every page footer."""
     def footer(self):
-        self.set_y(-18)
+        contact_parts = []
+        if COMPANY_PHONE:
+            contact_parts.append(f"Tel: {COMPANY_PHONE}")
+        if COMPANY_EMAIL:
+            contact_parts.append(f"Email: {COMPANY_EMAIL}")
+        if COMPANY_WEBSITE:
+            contact_parts.append(f"Web: {COMPANY_WEBSITE}")
+        if COMPANY_ADDRESS:
+            contact_parts.append(COMPANY_ADDRESS)
+        contact_line = " | ".join(contact_parts)
+
+        self.set_y(-24 if contact_line else -18)
         self.set_draw_color(180, 180, 180)
         self.line(10, self.get_y(), self.w - 10, self.get_y())
         self.set_font("Arial", '', 8)
         self.set_text_color(120, 120, 120)
         footer_left = f"{CLIENT_NAME} | {FOOTER_NOTE}" if FOOTER_NOTE else CLIENT_NAME
         self.cell(0, 6, footer_left.encode('latin-1', errors='replace').decode('latin-1'), 0, 0, 'L')
-        self.cell(0, 6, f"Page {self.page_no()}/{{nb}}", 0, 0, 'R')
+        self.cell(0, 6, f"Page {self.page_no()}/{{nb}}", 0, 1, 'R')
+        if contact_line:
+            self.set_x(10)
+            self.cell(0, 6, contact_line.encode('latin-1', errors='replace').decode('latin-1'), 0, 1, 'L')
         self.set_text_color(0, 0, 0)
 
-def create_pdf_report_multiple(designs: list, project_name: str, engineer_name: str = "",
-                                license_no: str = "", stamp_image_path: str = None) -> bytes:
+def create_pdf_report_multiple(designs: list, project_name: str, client_name: str = "",
+                                engineer_name: str = "", stamp_image_path: str = None) -> bytes:
     """Generate a comprehensive PDF report with all mix designs including parameter tables"""
     try:
         pdf = BrandedPDF()
@@ -608,31 +638,83 @@ def create_pdf_report_multiple(designs: list, project_name: str, engineer_name: 
                 x += width
             pdf.set_y(y_start + row_height)
 
-        # --- Cover Page with Logo ---
+        # --- Cover Page ---
         pdf.add_page()
+        accent_rgb = hex_to_rgb(PRIMARY_COLOR)
+
+        # Top accent band (letterhead style)
+        pdf.set_fill_color(*accent_rgb)
+        pdf.rect(0, 0, pdf.w, 10, 'F')
+
+        # Logo
+        logo_bottom = 28
         if LOGO_PATH and os.path.exists(LOGO_PATH):
             try:
                 with Image.open(LOGO_PATH) as img:
                     if img.mode != 'RGB':
                         img = img.convert('RGB')
-                    temp_logo_path = os.path.join(tempfile.gettempdir(), 
+                    temp_logo_path = os.path.join(tempfile.gettempdir(),
                                                 f"temp_logo_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg")
                     img.save(temp_logo_path, format='JPEG', quality=95)
-                    pdf.image(temp_logo_path, x=(pdf.w - 40)/2, y=30, w=40)
+                    pdf.image(temp_logo_path, x=(pdf.w - 40) / 2, y=22, w=40)
                     os.unlink(temp_logo_path)
-                pdf.ln(80)  # Increased space between logo and title
+                logo_bottom = 22 + 40 + 8
             except Exception as e:
                 st.error(f"Logo processing error: {str(e)}")
 
-        # Cover page content
+        pdf.set_y(logo_bottom)
+
+        # Title block
         pdf.set_font("Arial", 'B', 24)
-        pdf.cell(0, 15, safe_text("Concrete Mix Design Report"), 0, 1, 'C')
-        pdf.set_font("Arial", '', 16)
-        pdf.cell(0, 10, safe_text(f"Project: {project_name}"), 0, 1, 'C')
-        pdf.cell(0, 10, safe_text(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}"), 0, 1, 'C')
-        pdf.ln(20)
-        pdf.set_font("Arial", 'B', 18)
-        pdf.cell(0, 10, safe_text(f"Total Designs: {len(designs)}"), 0, 1, 'C')
+        pdf.set_text_color(*accent_rgb)
+        pdf.cell(0, 14, safe_text("Concrete Mix Design Report"), 0, 1, 'C')
+        pdf.set_text_color(90, 90, 90)
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 8, safe_text(APP_TITLE), 0, 1, 'C')
+        pdf.set_text_color(0, 0, 0)
+
+        pdf.ln(4)
+        pdf.set_draw_color(*accent_rgb)
+        pdf.set_line_width(0.6)
+        pdf.line(50, pdf.get_y(), pdf.w - 50, pdf.get_y())
+        pdf.set_line_width(0.2)
+        pdf.set_draw_color(0, 0, 0)
+        pdf.ln(12)
+
+        # Document info panel
+        info_rows = [("Project", project_name)]
+        if client_name:
+            info_rows.append(("Prepared For", client_name))
+        info_rows.append(("Prepared By", CLIENT_NAME))
+        info_rows.append(("Date Generated", datetime.now().strftime('%Y-%m-%d %H:%M')))
+        info_rows.append(("Total Mix Designs", str(len(designs))))
+
+        panel_w = 150
+        label_w = 55
+        row_h = 9
+        x0 = (pdf.w - panel_w) / 2
+        y0 = pdf.get_y()
+        panel_h = row_h * len(info_rows)
+
+        pdf.set_draw_color(200, 200, 200)
+        pdf.rect(x0, y0, panel_w, panel_h)
+        for idx, (label, value) in enumerate(info_rows):
+            y = y0 + idx * row_h
+            if idx > 0:
+                pdf.line(x0, y, x0 + panel_w, y)
+            pdf.set_xy(x0 + 4, y)
+            pdf.set_font("Arial", 'B', 11)
+            pdf.cell(label_w - 4, row_h, safe_text(label), 0, 0, 'L')
+            pdf.set_font("Arial", '', 11)
+            pdf.cell(panel_w - label_w - 4, row_h, safe_text(value), 0, 0, 'L')
+        pdf.set_draw_color(0, 0, 0)
+        pdf.set_y(y0 + panel_h + 14)
+
+        if FOOTER_NOTE:
+            pdf.set_font("Arial", 'I', 10)
+            pdf.set_text_color(120, 120, 120)
+            pdf.cell(0, 8, safe_text(FOOTER_NOTE), 0, 1, 'C')
+            pdf.set_text_color(0, 0, 0)
 
         # --- Design Pages ---
         for i, design in enumerate(designs, 1):
@@ -756,12 +838,6 @@ def create_pdf_report_multiple(designs: list, project_name: str, engineer_name: 
         pdf.cell(60, 8, safe_text("Engineer Name:"), 0, 0)
         pdf.set_font("Arial", '', 11)
         pdf.cell(0, 8, safe_text(engineer_name), 'B', 1)
-        pdf.ln(6)
-
-        pdf.set_font("Arial", 'B', 11)
-        pdf.cell(60, 8, safe_text("License / Registration No.:"), 0, 0)
-        pdf.set_font("Arial", '', 11)
-        pdf.cell(0, 8, safe_text(license_no), 'B', 1)
         pdf.ln(6)
 
         pdf.set_font("Arial", 'B', 11)
@@ -1061,10 +1137,6 @@ else:
         engineer_name = st.text_input("", st.session_state.get('engineer_name', ''), key="engineer_name_input")
         st.session_state['engineer_name'] = engineer_name
 
-        st.markdown("**License / Registration No.**")
-        license_no = st.text_input("", st.session_state.get('license_no', ''), key="license_no_input")
-        st.session_state['license_no'] = license_no
-
         st.markdown("**Signature / Stamp Image (optional)**")
         stamp_file = st.file_uploader("", type=['png', 'jpg', 'jpeg'], key="stamp_upload")
         if stamp_file is not None:
@@ -1138,8 +1210,8 @@ else:
                         f.write(st.session_state['stamp_bytes'])
                 pdf_data = create_pdf_report_multiple(
                     st.session_state['mix_designs'], project_name,
+                    client_name=st.session_state.get('client_name', ''),
                     engineer_name=st.session_state.get('engineer_name', ''),
-                    license_no=st.session_state.get('license_no', ''),
                     stamp_image_path=stamp_path
                 )
                 if stamp_path and os.path.exists(stamp_path):

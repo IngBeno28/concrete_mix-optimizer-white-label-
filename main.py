@@ -412,6 +412,117 @@ with st.expander("🔬 Material Properties"):
     st.markdown("**CA Moisture (%)**")
     moist_ca = st.number_input("", 0.0, 10.0, current_params['moist_ca'], key="moist_ca_input")
 
+# --- Combined Aggregate Grading Check (ASTM C33) ---
+ASTM_C33_SIZE67 = {
+    # sieve (mm): (min % passing, max % passing) — None where ASTM sets no limit
+    25.0: (100, 100),
+    19.0: (90, 100),
+    12.5: (None, None),
+    9.5: (20, 55),
+    4.75: (0, 10),
+    2.36: (0, 5),
+}
+DEFAULT_20MM_STOCK = {25.0: 100, 19.0: 95, 12.5: 55, 9.5: 25, 4.75: 3, 2.36: 1}
+DEFAULT_10MM_STOCK = {25.0: 100, 19.0: 100, 12.5: 100, 9.5: 92, 4.75: 15, 2.36: 3}
+
+if use_dual_ca:
+    with st.expander("📐 Combined Aggregate Grading Check (ASTM C33, Size 67)"):
+        st.caption(
+            "Enter the sieve analysis (% passing) for each stock size. The combined curve is "
+            f"weighted by your {ca_20mm_pct}% 20mm / {100 - ca_20mm_pct}% 10mm blend split above, "
+            "then checked against the ASTM C33 Size 67 envelope (19mm–4.75mm, the closest standard "
+            "grading band for a 20mm-NMAS blend)."
+        )
+
+        grading_df_default = pd.DataFrame({
+            "Sieve (mm)": list(ASTM_C33_SIZE67.keys()),
+            "20mm Stock % Passing": [DEFAULT_20MM_STOCK[s] for s in ASTM_C33_SIZE67],
+            "10mm Stock % Passing": [DEFAULT_10MM_STOCK[s] for s in ASTM_C33_SIZE67],
+        })
+
+        edited_grading = st.data_editor(
+            grading_df_default,
+            column_config={
+                "Sieve (mm)": st.column_config.NumberColumn(disabled=True),
+                "20mm Stock % Passing": st.column_config.NumberColumn(min_value=0.0, max_value=100.0, step=1.0),
+                "10mm Stock % Passing": st.column_config.NumberColumn(min_value=0.0, max_value=100.0, step=1.0),
+            },
+            hide_index=True,
+            use_container_width=True,
+            key="grading_editor"
+        )
+
+        frac_20 = ca_20mm_pct / 100
+        frac_10 = 1 - frac_20
+
+        rows = []
+        all_pass = True
+        for _, row in edited_grading.iterrows():
+            sieve = row["Sieve (mm)"]
+            p20 = row["20mm Stock % Passing"]
+            p10 = row["10mm Stock % Passing"]
+            combined = p20 * frac_20 + p10 * frac_10
+            lo, hi = ASTM_C33_SIZE67.get(sieve, (None, None))
+            if lo is None:
+                status = "—"
+            elif lo <= combined <= hi:
+                status = "✅ Pass"
+            else:
+                status = "⚠️ Out of range"
+                all_pass = False
+            rows.append({
+                "Sieve (mm)": sieve,
+                "Combined % Passing": round(combined, 1),
+                "ASTM Min": lo if lo is not None else "—",
+                "ASTM Max": hi if hi is not None else "—",
+                "Status": status
+            })
+
+        result_df = pd.DataFrame(rows)
+        st.dataframe(result_df, hide_index=True, use_container_width=True)
+
+        if all_pass:
+            st.success("✅ Combined blend falls within the ASTM C33 Size 67 grading envelope at every checked sieve.")
+        else:
+            st.warning("⚠️ Combined blend falls outside the ASTM C33 Size 67 envelope at one or more sieves — adjust the blend ratio or stock gradations above.")
+
+        # Gradation curve chart
+        fig, ax = plt.subplots(figsize=(6, 4))
+        sieves = edited_grading["Sieve (mm)"].tolist()
+        combined_vals = result_df["Combined % Passing"].tolist()
+        env_lo = [ASTM_C33_SIZE67[s][0] for s in sieves]
+        env_hi = [ASTM_C33_SIZE67[s][1] for s in sieves]
+
+        ax.plot(sieves, combined_vals, marker='o', color='#0052cc', label='Combined Blend', linewidth=2)
+        # Envelope band, skipping sieves with no defined limit
+        band_sieves = [s for s, lo in zip(sieves, env_lo) if lo is not None]
+        band_lo = [lo for lo in env_lo if lo is not None]
+        band_hi = [hi for hi in env_hi if hi is not None]
+        if band_sieves:
+            ax.fill_between(band_sieves, band_lo, band_hi, color='grey', alpha=0.25, label='ASTM C33 Size 67 Envelope')
+
+        ax.set_xscale('log')
+        ax.invert_xaxis()
+        ax.set_xlabel("Sieve Size (mm)")
+        ax.set_ylabel("% Passing")
+        ax.set_title("Combined Aggregate Gradation Curve")
+        ax.set_ylim(0, 105)
+        ax.legend(fontsize=8)
+        ax.grid(True, which='both', linestyle='--', alpha=0.4)
+        st.pyplot(fig)
+
+        # Persist for inclusion in the PDF report
+        chart_buf = io.BytesIO()
+        fig.savefig(chart_buf, format='png', dpi=150, bbox_inches='tight')
+        st.session_state['grading_check'] = {
+            "blend_label": f"{ca_20mm_pct}% 20mm / {100 - ca_20mm_pct}% 10mm",
+            "rows": rows,
+            "all_pass": all_pass,
+            "chart_png": chart_buf.getvalue()
+        }
+else:
+    st.session_state['grading_check'] = None
+
 # --- Enhanced Mix Design Logic for Industrialized Construction ---
 def calculate_mix(
     fck, std_dev, exposure, max_agg_size, slump, air_entrained,
@@ -584,7 +695,8 @@ class BrandedPDF(FPDF):
         self.set_text_color(0, 0, 0)
 
 def create_pdf_report_multiple(designs: list, project_name: str, client_name: str = "",
-                                engineer_name: str = "", stamp_image_path: str = None) -> bytes:
+                                engineer_name: str = "", stamp_image_path: str = None,
+                                grading_check: dict = None) -> bytes:
     """Generate a comprehensive PDF report with all mix designs including parameter tables"""
     try:
         pdf = BrandedPDF()
@@ -820,6 +932,59 @@ def create_pdf_report_multiple(designs: list, project_name: str, client_name: st
             
             for param, value, unit in industrialized_parameters:
                 draw_table_row(param_col_widths, [param, value, unit], aligns=['L', 'C', 'C'])
+
+        # --- Combined Aggregate Grading Check ---
+        if grading_check:
+            pdf.add_page()
+            pdf.set_font("Arial", 'B', 18)
+            pdf.cell(0, 12, safe_text("Combined Aggregate Grading Check"), 0, 1, 'C')
+            pdf.set_font("Arial", '', 11)
+            pdf.cell(0, 8, safe_text("ASTM C33 Size 67 (19mm-4.75mm envelope)"), 0, 1, 'C')
+            pdf.ln(4)
+
+            pdf.set_font("Arial", '', 11)
+            pdf.multi_cell(0, 6, safe_text(f"Blend Ratio: {grading_check['blend_label']}"))
+            pdf.ln(2)
+
+            grading_col_widths = [40, 40, 30, 30, 40]
+            draw_table_row(
+                grading_col_widths,
+                ["Sieve (mm)", "Combined % Passing", "ASTM Min", "ASTM Max", "Status"],
+                aligns=['C', 'C', 'C', 'C', 'C'], bold=True
+            )
+            for row in grading_check['rows']:
+                status_text = row['Status'].replace("✅ ", "").replace("⚠️ ", "")
+                draw_table_row(
+                    grading_col_widths,
+                    [row['Sieve (mm)'], row['Combined % Passing'], row['ASTM Min'], row['ASTM Max'], status_text],
+                    aligns=['C', 'C', 'C', 'C', 'C']
+                )
+
+            pdf.ln(4)
+            if grading_check['all_pass']:
+                pdf.set_font("Arial", 'B', 11)
+                pdf.set_text_color(0, 130, 0)
+                pdf.multi_cell(0, 7, safe_text("PASS: Combined blend falls within the ASTM C33 Size 67 envelope at every checked sieve."))
+            else:
+                pdf.set_font("Arial", 'B', 11)
+                pdf.set_text_color(190, 130, 0)
+                pdf.multi_cell(0, 7, safe_text("NOTE: Combined blend falls outside the ASTM C33 Size 67 envelope at one or more sieves. Review the blend ratio or stock gradations."))
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(6)
+
+            if grading_check.get('chart_png'):
+                try:
+                    chart_path = os.path.join(
+                        tempfile.gettempdir(),
+                        f"temp_gradation_chart_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.png"
+                    )
+                    with open(chart_path, 'wb') as f:
+                        f.write(grading_check['chart_png'])
+                    chart_w = 160
+                    pdf.image(chart_path, x=(pdf.w - chart_w) / 2, w=chart_w)
+                    os.unlink(chart_path)
+                except Exception as e:
+                    st.warning(f"Could not embed gradation chart in PDF: {str(e)}")
 
         # --- Certification / Sign-off Page ---
         pdf.add_page()
@@ -1212,7 +1377,8 @@ else:
                     st.session_state['mix_designs'], project_name,
                     client_name=st.session_state.get('client_name', ''),
                     engineer_name=st.session_state.get('engineer_name', ''),
-                    stamp_image_path=stamp_path
+                    stamp_image_path=stamp_path,
+                    grading_check=st.session_state.get('grading_check')
                 )
                 if stamp_path and os.path.exists(stamp_path):
                     os.unlink(stamp_path)

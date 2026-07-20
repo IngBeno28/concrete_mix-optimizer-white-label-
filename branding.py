@@ -8,10 +8,10 @@ FOOTER_NOTE = "© 2025 ACI Mix Designer | Built for engineering precision"
 # --- Company Contact Details ---
 # Shown in the PDF report footer, cover page, and certification page.
 # Leave any value as "" to omit that line from the report.
-COMPANY_ADDRESS = "Plot 63/G Asuofua"       # e.g. "12 Independence Ave, Accra, Ghana"
-COMPANY_PHONE = "+233501365879"         # e.g. "+233 20 000 0000"
-COMPANY_EMAIL = "Wiafe1713@gmail.com"         # e.g. "info@automationhub.com"
-COMPANY_WEBSITE = "Firstsky.com"       # e.g. "www.automationhub.com"
+COMPANY_ADDRESS = ""       # e.g. "12 Independence Ave, Accra, Ghana"
+COMPANY_PHONE = ""         # e.g. "+233 20 000 0000"
+COMPANY_EMAIL = ""         # e.g. "info@automationhub.com"
+COMPANY_WEBSITE = ""       # e.g. "www.automationhub.com"
 COMPANY_LICENSE_NO = ""    # e.g. company/firm registration or license number
 
 # Responsive logo configuration
